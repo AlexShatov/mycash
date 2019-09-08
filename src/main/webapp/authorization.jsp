@@ -5,7 +5,7 @@
 	<meta charset="ISO-8859-1">
 	<style type="text/css">
 	  div {
-	  padding-top: 200px;
+	  padding-top: 210px;
 	  }	
 	</style>
 		<title>Authorization</title>
