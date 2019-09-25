@@ -9,18 +9,22 @@ import ru.mycash.domain.User;
 public class MySqlUserDao implements AutoCloseable {
 	
 	private Connection connection;
-	private static final String queryForInsert = "insert into mycash_db.users (login, pass, mail, is_active) values (?, ?, ?, true)";
-	private static final String queryForRead = "select id, login, pass, mail, is_active from mycash_db.users where id = ?";	
-	private static final String queryForUpdate = "update mycash_db.users set login = ?, pass = ?, mail = ?, is_active = ? where id = ?";
-	private static final String queryGetByLogin = "select id, login, pass, mail, is_active from mycash_db.users where login = ?";
+	private static final String queryForInsert = "insert into users (login, pass, mail, is_active) values (?, ?, ?, true)";
+	private static final String queryForRead = "select id, login, pass, mail, is_active from users where id = ?";	
+	private static final String queryForUpdate = "update users set login = ?, pass = ?, mail = ?, is_active = ? where id = ?";
+	private static final String queryGetByLogin = "select id, login, pass, mail, is_active from users where login = ?";
+	private static final String queryForDeactivate = "update users set is_active = false where id = ?";
+	private static final String queryForDelete = "delete from users where id = ?";
 	
 	private PreparedStatement statementForInsert;
 	private PreparedStatement statementForRead;
 	private PreparedStatement statementForUpdate;
 	private PreparedStatement stmtForGetByLogin;
+	private PreparedStatement statementForDeactivate;
+	private PreparedStatement statementForDelete;
 	
 	public MySqlUserDao() throws DaoException{
-		try(InputStream input = MySqlUserDao.class.getClassLoader().getResourceAsStream("/mycash_db.properties")){
+		try(InputStream input = MySqlUserDao.class.getClassLoader().getResourceAsStream("mycash_db.properties")){
 			Properties properties = new Properties();
 			properties.load(input);
 			String url = properties.getProperty("url");
@@ -31,6 +35,8 @@ public class MySqlUserDao implements AutoCloseable {
 			statementForRead = connection.prepareStatement(queryForRead);
 			statementForUpdate = connection.prepareStatement(queryForUpdate);
 			stmtForGetByLogin = connection.prepareStatement(queryGetByLogin);
+			statementForDeactivate = connection.prepareStatement(queryForDeactivate);
+			statementForDelete = connection.prepareStatement(queryForDelete);
 		}
 		catch(SQLException | IOException | NullPointerException e) {
 			throw new DaoException("Failed to create MySqlUserDao object", e);
@@ -71,18 +77,16 @@ public class MySqlUserDao implements AutoCloseable {
 		try{
 			statementForRead.setInt(1, id);
 			rSet = statementForRead.executeQuery();
+			User user = null;
 			if(rSet.next()) {
-				User user = new User();
+				user = new User();
 				user.setId(rSet.getInt("id"));
 				user.setLogin(rSet.getString("login"));
 				user.setPassword(rSet.getString("pass"));
 				user.setMail(rSet.getString("mail"));
 				user.setIsActive(rSet.getBoolean("is_active"));
-				return user;
-			} else {
-				return null;
 			}
-
+			return user;
 		}
 		catch (SQLException e){
 			throw new DaoException("Failed to read user", e);
@@ -110,6 +114,16 @@ public class MySqlUserDao implements AutoCloseable {
 		}
 		catch (SQLException | NullPointerException e){
 			throw new DaoException("Failed to update user", e);
+		}
+	}
+	
+	public void delete(int id) throws DaoException{
+		try {
+			statementForDelete.setInt(1, id);
+			statementForDelete.executeUpdate();
+		}
+		catch (SQLException | NullPointerException e){
+			throw new DaoException("Failed to delete user", e);
 		}
 	}
 	
@@ -141,6 +155,15 @@ public class MySqlUserDao implements AutoCloseable {
 					throw new DaoException("Unable to close ResultSet", e);
 				}
 			}
+		}
+	}
+	
+	public void deactivate(int id) throws DaoException{
+		try {
+			statementForDeactivate.setInt(1, id);
+			statementForDeactivate.executeUpdate();
+		}catch (SQLException | NullPointerException e){
+			throw new DaoException("Failed to deactivate user", e);
 		}
 	}
 	

@@ -8,10 +8,14 @@ import ru.mycash.domain.Count;
 
 public class MySqlCountDao implements AutoCloseable{
 	private Connection connection;
-	private static final String queryForInsert = "insert into mycash_db.counts (count_name, balance, currency, is_active, user_id) values (?, ?, ?, true, ?)";	
-	private static final String queryForUpdate = "update mycash_db.counts set count_name = ?, balance = ?, currency = ?, is_active = ?, user_id = ? where id = ?";
-	private static final String queryForGetAll = "select id, count_name, balance, currency, is_active, user_id from mycash_db.counts";
-	private static final String queryForDeactivate  = "update mycash_db.counts set is_active = false where id = ?";
+	private static final String queryForInsert = "insert into counts "
+			+ "(count_name, balance, currency, is_active, user_id) values (?, ?, ?, true, ?)";	
+	private static final String queryForUpdate = "update counts set "
+			+ "count_name = ?, balance = ?, currency = ?, is_active = ?, user_id = ? where id = ?";
+	private static final String queryForGetAll = "select id, count_name, balance, currency, is_active, user_id"
+			+ " from counts";
+	private static final String queryForDeactivate  = "update counts set is_active = false where id = ?";
+	private static final String queryForDelete  ="delete from counts where id = ?";
 
 	private PreparedStatement statementForInsert;
 	private PreparedStatement statementForRead;
@@ -20,9 +24,10 @@ public class MySqlCountDao implements AutoCloseable{
 	private PreparedStatement statementForGetAllActive;
 	private PreparedStatement statementForDeactivate;
 	private PreparedStatement statementForGetByName;
+	private PreparedStatement statementForDelete;
 	
 	public MySqlCountDao() throws DaoException{
-		try(InputStream input = MySqlUserDao.class.getClassLoader().getResourceAsStream("/mycash_db.properties")){
+		try(InputStream input = MySqlUserDao.class.getClassLoader().getResourceAsStream("mycash_db.properties")){
 			Properties properties = new Properties();
 			properties.load(input);
 			String url = properties.getProperty("url");
@@ -36,6 +41,7 @@ public class MySqlCountDao implements AutoCloseable{
 			statementForGetAllActive = connection.prepareStatement(queryForGetAll + " where is_active = true and user_id = ?");
 			statementForDeactivate = connection.prepareStatement(queryForDeactivate);
 			statementForGetByName = connection.prepareStatement(queryForGetAll + " where count_name = ? and user_id = ?");
+			statementForDelete = connection.prepareStatement(queryForDelete);
 		}
 		catch(SQLException | IOException | NullPointerException e) {
 			throw new DaoException("Failed to create MySqlCountDao object", e);
@@ -165,18 +171,17 @@ public class MySqlCountDao implements AutoCloseable{
 			statementForGetByName.setString(1, countName);
 			statementForGetByName.setInt(2, userId);
 			rSet = statementForGetByName.executeQuery();
+			Count count = null;
 			if(rSet.next()) {
-				Count count = new Count();
+				count = new Count();
 				count.setId(rSet.getInt("id"));
 				count.setCountName(rSet.getString("count_name"));
 				count.setBalance(rSet.getDouble("balance"));
 				count.setCurrency(rSet.getString("currency"));
 				count.setIsActive(rSet.getBoolean("is_active"));
 				count.setUserId(rSet.getInt("user_id"));
-				return count;
-			} else {
-				return null;
 			}
+			return count;
 		}
 		catch(SQLException e) {
 			throw new DaoException("Failed to read count", e);
@@ -196,6 +201,16 @@ public class MySqlCountDao implements AutoCloseable{
 		}
 		
 	}
+	
+	public void delete(int countId) throws DaoException{
+		try{
+			statementForDelete.setInt(1, countId);
+			statementForDelete.executeUpdate();
+		}
+		catch(SQLException e) {
+			throw new DaoException("Failed to delete count", e);
+		}
+	} 
 	
 	public void close() throws DaoException{
 		DaoException exception = new DaoException("MySqlCountDao has been closed with exception(s)");
