@@ -8,16 +8,19 @@ import ru.mycash.domain.IncomeCategory;
 
 public class MySqlIncomeCategoryDao{
 	private Connection connection;
-	private static final String queryForInsert = "insert into mycash_db.income_categories (category_name, is_active, user_id)" 
+	private static final String queryForInsert = "insert into income_categories (category_name, is_active, user_id)" 
 			+ " values (?, true, ?)";
-	private static final String queryForUpdate = "update mycash_db.income_categories set " +
+	private static final String queryForUpdate = "update income_categories set " +
 			"category_name = ?, is_active = ?, user_id = ? where id = ?";
-	private static final String queryForRead = "select id, category_name, is_active, user_id from mycash_db.income_categories" 
+	private static final String queryForRead = "select id, category_name, is_active, user_id from income_categories" 
 			+ " where id = ?";
-	private static final String queryForGetAll = "select id, category_name, is_active, user_id from" 
-			+ " mycash_db.income_categories where user_id = ?";
+	private static final String queryForGetAll = "select id, category_name, is_active, user_id from income_categories" 
+			+ " where user_id = ?";
 	private static final String queryForGetAllActive = "select id, category_name, is_active, user_id from" 
-			+ " mycash_db.income_categories where user_id = ? and is_active = true";
+			+ " income_categories where user_id = ? and is_active = true";
+	private static final String queryForDelete = "delete from income_categories where id = ?";
+	private static final String queryForDeactivate = "update income_categories set " +
+			"is_active = false where id = ?";
 
 	private PreparedStatement statementForInsert;
 	private PreparedStatement statementForRead;
@@ -25,9 +28,12 @@ public class MySqlIncomeCategoryDao{
 	private PreparedStatement statementForGetAll;
 	private PreparedStatement statementForGetAllActive;
 	private PreparedStatement statementForGetByName;
+	private PreparedStatement statementForDelete;
+	private PreparedStatement statementForDeactivate;
+	
 	
 	public MySqlIncomeCategoryDao() throws DaoException{
-		try(InputStream input = MySqlIncomeCategoryDao.class.getClassLoader().getResourceAsStream("/mycash_db.properties")){
+		try(InputStream input = MySqlIncomeCategoryDao.class.getClassLoader().getResourceAsStream("mycash_db.properties")){
 			Properties properties = new Properties();
 			properties.load(input);
 			String url = properties.getProperty("url");
@@ -40,6 +46,8 @@ public class MySqlIncomeCategoryDao{
 			statementForGetAll = connection.prepareStatement(queryForGetAll);
 			statementForGetAllActive = connection.prepareStatement(queryForGetAllActive);
 			statementForGetByName = connection.prepareStatement(queryForGetAllActive + " and category_name = ?");
+			statementForDelete = connection.prepareStatement(queryForDelete);
+			statementForDeactivate = connection.prepareStatement(queryForDeactivate);
 		}
 		catch(SQLException | IOException | NullPointerException e){
 			throw new DaoException("Failed to create MySqlIncomeCategoryDao object", e);
@@ -105,10 +113,11 @@ public class MySqlIncomeCategoryDao{
 		}
 	}
 	
-	public ArrayList<IncomeCategory> getAll() throws DaoException{
+	public ArrayList<IncomeCategory> getAll(int userId) throws DaoException{
 		ResultSet rSet = null;
 		try{
 			ArrayList<IncomeCategory> result = new ArrayList<>();
+			statementForGetAll.setInt(1, userId);
 			rSet = statementForGetAll.executeQuery();
 			while (rSet.next()){
 				IncomeCategory incomeCat = new IncomeCategory();
@@ -158,22 +167,41 @@ public class MySqlIncomeCategoryDao{
 			statementForGetByName.setInt(1, userId);
 			statementForGetByName.setString(2, categoryName);
 			rSet = statementForGetByName.executeQuery();
+			IncomeCategory incomeCat = null;
 			if(rSet.next()) {
-				IncomeCategory incomeCat = new IncomeCategory();
+				incomeCat = new IncomeCategory();
 				incomeCat.setId(rSet.getInt("id"));
 				incomeCat.setCategoryName(rSet.getString("category_name"));
 				incomeCat.setIsActive(rSet.getBoolean("is_active"));
 				incomeCat.setUserId(rSet.getInt("user_id"));
-				return incomeCat;
-			} else {
-				return null;
-			}
+			} 
+			return incomeCat;
 		}
 		catch (SQLException e){
 			throw new DaoException("Failed to read income category", e);
 		}
 		finally{
 			closeResultSet(rSet);
+		}
+	}
+	
+	public void deactivate(int incomeCatId) throws DaoException{
+		try {
+			statementForDeactivate.setInt(1, incomeCatId);
+			statementForDeactivate.executeUpdate();
+		} 
+		catch(SQLException e) {
+			throw new DaoException("Failed to deactivate income category", e);
+		}
+		
+	}
+	
+	public void delete(int id) throws DaoException{
+		try {
+			statementForDelete.setInt(1, id);
+			statementForDelete.executeUpdate();
+		}catch(SQLException e){
+			throw new DaoException("Failed to delete income category", e);
 		}
 	}
 	
@@ -241,6 +269,16 @@ public class MySqlIncomeCategoryDao{
 				exception.addSuppressed(e);
 			}
 		}
+		
+		if(statementForDelete != null){
+			try{
+				statementForDelete.close();
+			}
+			catch(SQLException e){
+				exception.addSuppressed(e);
+			}
+		}
+		
 		Throwable[] suppressed = exception.getSuppressed();
 		if(suppressed.length > 0){
 			throw exception;
