@@ -5,17 +5,22 @@ import java.io.*;
 import java.util.*;
 
 import ru.mycash.domain.ExpenseCategory;
-import ru.mycash.domain.IncomeCategory;
 
 public class MySqlExpenseCategoryDao{
 	private Connection connection;
-	private static final String queryForInsert = "insert into mycash_db.expense_categories (category_name, is_active, user_id)"
+	private static final String queryForInsert = "insert into expense_categories (category_name, is_active, user_id)"
 			+ " values (?, true, ?)";
-	private static final String queryForUpdate = "update mycash_db.expense_categories set" +
+	private static final String queryForUpdate = "update expense_categories set" +
 			" category_name = ?, is_active = ?, user_id = ? where id = ?";
-	private static final String queryForGetAll = "select id, category_name, is_active, user_id from mycash_db.expense_categories ";
+	private static final String queryForGetAll = "select id, category_name, is_active, user_id from expense_categories where user_id = ?";
 	private static final String queryForGetAllActive = "select id, category_name, is_active, user_id" + 
-			" from mycash_db.expense_categories where user_id = ? and is_active = true";
+			" from expense_categories where user_id = ? and is_active = true";
+	private static final String queryForDelete = "delete from expense_categories where id = ?";
+	private static final String queryForDeactivate = "update expense_categories set is_active = false where id = ?";
+	private static final String queryForGetByName = "select id, category_name, is_active, user_id from expense_categories"
+			+ " where user_id = ? and category_name = ?";
+	private static final String queryForRead = "select id, category_name, is_active, user_id from expense_categories" 
+			+ " where id = ?";
 
 	private PreparedStatement statementForInsert;
 	private PreparedStatement statementForRead;
@@ -23,9 +28,11 @@ public class MySqlExpenseCategoryDao{
 	private PreparedStatement statementForGetAll;
 	private PreparedStatement statementForGetAllActive;
 	private PreparedStatement statementForGetByName;
+	private PreparedStatement statementForDelete;
+	private PreparedStatement statementForDeactivate;
 	
 	public MySqlExpenseCategoryDao() throws DaoException{
-		try(InputStream input = MySqlExpenseCategoryDao.class.getClassLoader().getResourceAsStream("/mycash_db.properties")){
+		try(InputStream input = MySqlExpenseCategoryDao.class.getClassLoader().getResourceAsStream("mycash_db.properties")){
 			Properties properties = new Properties();
 			properties.load(input);
 			String url = properties.getProperty("url");
@@ -33,11 +40,13 @@ public class MySqlExpenseCategoryDao{
 			String password = properties.getProperty("password");
 			connection = DriverManager.getConnection(url, username, password);
 			statementForInsert = connection.prepareStatement(queryForInsert, Statement.RETURN_GENERATED_KEYS);
-			statementForRead = connection.prepareStatement(queryForGetAll + "where id = ?");
+			statementForRead = connection.prepareStatement(queryForRead);
 			statementForUpdate = connection.prepareStatement(queryForUpdate);
 			statementForGetAll = connection.prepareStatement(queryForGetAll);
 			statementForGetAllActive = connection.prepareStatement(queryForGetAllActive);
-			statementForGetByName = connection.prepareStatement(queryForGetAllActive + " and category_name = ?");
+			statementForGetByName = connection.prepareStatement(queryForGetByName);
+			statementForDelete = connection.prepareStatement(queryForDelete);
+			statementForDeactivate = connection.prepareStatement(queryForDeactivate);
 		}
 		catch(SQLException | IOException | NullPointerException e){
 			throw new DaoException("Failed to create MySqlExpenseCategoryDao object", e);
@@ -70,17 +79,15 @@ public class MySqlExpenseCategoryDao{
 		try{
 			statementForRead.setInt(1, id);
 			rSet = statementForRead.executeQuery();
+			ExpenseCategory expenseCat = null;
 			if(rSet.next()) {
-				ExpenseCategory expenseCat = new ExpenseCategory();
+				expenseCat = new ExpenseCategory();
 				expenseCat.setId(rSet.getInt("id"));
 				expenseCat.setCategoryName(rSet.getString("category_name"));
 				expenseCat.setIsActive(rSet.getBoolean("is_active"));
 				expenseCat.setUserId(rSet.getInt("user_id"));
-				return expenseCat;
-			} else {
-				return null;
 			}
-
+			return expenseCat;
 		}
 		catch (SQLException e){
 			throw new DaoException("Failed to read expense category", e);
@@ -103,10 +110,11 @@ public class MySqlExpenseCategoryDao{
 		}
 	}
 	
-	public ArrayList<ExpenseCategory> getAll() throws DaoException{
+	public ArrayList<ExpenseCategory> getAll(int userId) throws DaoException{
 		ResultSet rSet = null;
 		try{
 			ArrayList<ExpenseCategory> result = new ArrayList<>();
+			statementForGetAll.setInt(1, userId);
 			rSet = statementForGetAll.executeQuery();
 			while (rSet.next()){
 				ExpenseCategory expenseCat = new ExpenseCategory();
@@ -150,28 +158,45 @@ public class MySqlExpenseCategoryDao{
 		}
 	}
 	
-	public IncomeCategory getByName(int userId, String categoryName) throws DaoException{
+	public ExpenseCategory getByName(int userId, String categoryName) throws DaoException{
 		ResultSet rSet = null;
 		try{
 			statementForGetByName.setInt(1, userId);
 			statementForGetByName.setString(2, categoryName);
 			rSet = statementForGetByName.executeQuery();
+			ExpenseCategory expenseCat = null;
 			if(rSet.next()) {
-				IncomeCategory incomeCat = new IncomeCategory();
-				incomeCat.setId(rSet.getInt("id"));
-				incomeCat.setCategoryName(rSet.getString("category_name"));
-				incomeCat.setIsActive(rSet.getBoolean("is_active"));
-				incomeCat.setUserId(rSet.getInt("user_id"));
-				return incomeCat;
-			} else {
-				return null;
+				expenseCat = new ExpenseCategory();
+				expenseCat.setId(rSet.getInt("id"));
+				expenseCat.setCategoryName(rSet.getString("category_name"));
+				expenseCat.setIsActive(rSet.getBoolean("is_active"));
+				expenseCat.setUserId(rSet.getInt("user_id"));
 			}
+			return expenseCat;
 		}
 		catch (SQLException e){
 			throw new DaoException("Failed to read expense category", e);
 		}
 		finally{
 			closeResultSet(rSet);
+		}
+	}
+	
+	public void delete(int categoryId) throws DaoException{
+		try {
+			statementForDelete.setInt(1, categoryId);
+			statementForDelete.executeUpdate();
+		}catch(SQLException e) {
+			throw new DaoException("Failed to delete expense category", e);
+		}
+	}
+	
+	public void deactivate(int categoryId) throws DaoException{
+		try {
+			statementForDeactivate.setInt(1, categoryId);
+			statementForDeactivate.executeUpdate();
+		}catch(SQLException e) {
+			throw new DaoException("Failed to deactivate expense category", e);
 		}
 	}
 	

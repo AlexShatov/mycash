@@ -16,13 +16,8 @@ public class MySqlDaoFactory {
         }
     }
 
-    public MySqlUserDao getMySqlUserDao() throws  DaoException{
-        try{
+    public MySqlUserDao getMySqlUserDao() {
             return new MySqlUserDao();
-        }
-        catch (DaoException e){
-            throw e;
-        }
     }
 
     public MySqlIncomeDao getMySqlIncomeDao() throws  DaoException{

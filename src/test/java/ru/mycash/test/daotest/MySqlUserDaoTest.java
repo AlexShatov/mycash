@@ -28,14 +28,6 @@ public class MySqlUserDaoTest {
 		cleaner.cleanUsers();
 	}
 	
-	
-	@Test 
-	public void testInit() throws DaoException{
-		MySqlUserDao sqlUserDao = factory.getMySqlUserDao();
-		assertNotNull(sqlUserDao);
-		sqlUserDao.close();
-	}
-	
 	@Test 
 	public void testRead() throws DaoException{
 		User firstUser = userDao.read(1);
@@ -73,6 +65,7 @@ public class MySqlUserDaoTest {
 		User user = new User();
 		user.setLogin("test");
 		user.setPassword("2Qqqqq");
+		user.setIsActive(true);
 		user.setMail("test@gmail.com");
 		userDao.insert(user);
 		User insertedUser = userDao.getByLogin("test");
@@ -97,6 +90,7 @@ public class MySqlUserDaoTest {
 		User user = new User();
 		user.setLogin("test");
 		user.setPassword("2Qqqqq");
+		user.setIsActive(true);
 		user.setMail("test@gmail.com");
 		userDao.insert(user);
 		userDao.deactivate(user.getId());
@@ -105,10 +99,9 @@ public class MySqlUserDaoTest {
 		userDao.delete(user.getId());
 	}
 	
-	@Test
+	@Test (expectedExceptions = DaoException.class)
 	public void TestDeactivateNull() throws DaoException{
 		userDao.deactivate(2);
-		assertNull(userDao.read(2));
 	}
 	
 	@Test 
@@ -116,27 +109,15 @@ public class MySqlUserDaoTest {
 		User user = new User();
 		user.setLogin("test");
 		user.setPassword("2Qqqqq");
+		user.setIsActive(true);
 		user.setMail("test@gmail.com");
 		userDao.insert(user);
 		userDao.delete(user.getId());
 		assertNull(userDao.read(user.getId()));
 	}
 	
-
-	@Test 
-	public void testClose(){
-		try {
-			MySqlUserDao sqlUserDao = factory.getMySqlUserDao();
-			assertNotNull(sqlUserDao);
-			sqlUserDao.close();
-		}catch(DaoException e) {
-			fail("testClose() failed with exception");
-		}
-	}
-	
 	@AfterClass
 	public void closeRes() throws DaoException{
 		cleaner.close();
-		userDao.close();
 	}
 }

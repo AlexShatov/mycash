@@ -1,213 +1,165 @@
 package ru.mycash.dao;
 
-import java.sql.*;
-import java.io.*;
-import java.util.Properties;
+import javax.persistence.RollbackException;
+
+import org.hibernate.HibernateException;
+import org.hibernate.Session;
+import org.hibernate.query.Query;
+import org.hibernate.Transaction;
 
 import ru.mycash.domain.User;
+import ru.mycash.util.HibernateUtil;
 
-public class MySqlUserDao implements AutoCloseable {
+public class MySqlUserDao{
 	
-	private Connection connection;
-	private static final String queryForInsert = "insert into users (login, pass, mail, is_active) values (?, ?, ?, true)";
-	private static final String queryForRead = "select id, login, pass, mail, is_active from users where id = ?";	
-	private static final String queryForUpdate = "update users set login = ?, pass = ?, mail = ?, is_active = ? where id = ?";
-	private static final String queryGetByLogin = "select id, login, pass, mail, is_active from users where login = ?";
-	private static final String queryForDeactivate = "update users set is_active = false where id = ?";
-	private static final String queryForDelete = "delete from users where id = ?";
-	
-	private PreparedStatement statementForInsert;
-	private PreparedStatement statementForRead;
-	private PreparedStatement statementForUpdate;
-	private PreparedStatement stmtForGetByLogin;
-	private PreparedStatement statementForDeactivate;
-	private PreparedStatement statementForDelete;
-	
-	public MySqlUserDao() throws DaoException{
-		try(InputStream input = MySqlUserDao.class.getClassLoader().getResourceAsStream("mycash_db.properties")){
-			Properties properties = new Properties();
-			properties.load(input);
-			String url = properties.getProperty("url");
-			String username = properties.getProperty("user");
-			String password = properties.getProperty("password");
-			connection = DriverManager.getConnection(url, username, password);
-			statementForInsert = connection.prepareStatement(queryForInsert, Statement.RETURN_GENERATED_KEYS);
-			statementForRead = connection.prepareStatement(queryForRead);
-			statementForUpdate = connection.prepareStatement(queryForUpdate);
-			stmtForGetByLogin = connection.prepareStatement(queryGetByLogin);
-			statementForDeactivate = connection.prepareStatement(queryForDeactivate);
-			statementForDelete = connection.prepareStatement(queryForDelete);
-		}
-		catch(SQLException | IOException | NullPointerException e) {
-			throw new DaoException("Failed to create MySqlUserDao object", e);
-		}
-	}
+	private static final String queryForRead = "from User where id=:id";
+	private static final String queryForGetByLogin = "from User where login=:login";
 	
 	public void insert (User user) throws DaoException{
-		ResultSet rSet = null;
+		Session session = null;
+		Transaction transaction = null;
 		try {
-			statementForInsert.setString(1, user.getLogin());
-			statementForInsert.setString(2, user.getPassword());
-			statementForInsert.setString(3, user.getMail());
-			statementForInsert.executeUpdate();
-			rSet = statementForInsert.getGeneratedKeys();
-			Integer recordId;
-			if (rSet.next()) {
-				recordId = rSet.getInt(1);
-				user.setId(recordId);
-			}
+			session= HibernateUtil.getSessionFactory().openSession();
+			transaction = session.beginTransaction();
+	        session.save(user);
+	        transaction.commit();
 		}
-		catch (SQLException e){
+		catch (HibernateException | RollbackException | IllegalStateException  e){
+			if(transaction != null) {
+				transaction.rollback();
+			}
 			throw new DaoException("Failed to insert user", e);
 		}
 		finally{
-			if (rSet != null){
-				try{
-					rSet.close();
-				}
-				catch (SQLException e){
-					throw new DaoException("Unable to close ResultSet", e);
-				}
-			}
+			closeSession(session);
 		}
 	}
 	
 	public User read(int id) throws DaoException{
-		ResultSet rSet = null;
+		Session session = null;
+		Transaction transaction = null;
+		User user = null;
 		try{
-			statementForRead.setInt(1, id);
-			rSet = statementForRead.executeQuery();
-			User user = null;
-			if(rSet.next()) {
-				user = new User();
-				user.setId(rSet.getInt("id"));
-				user.setLogin(rSet.getString("login"));
-				user.setPassword(rSet.getString("pass"));
-				user.setMail(rSet.getString("mail"));
-				user.setIsActive(rSet.getBoolean("is_active"));
-			}
+			session= HibernateUtil.getSessionFactory().openSession();
+			transaction = session.beginTransaction();
+			Query <User> query= session.createQuery(queryForRead, User.class);
+			query.setParameter("id", id);
+			user = (User) query.uniqueResult();
+			transaction.commit();
 			return user;
 		}
-		catch (SQLException e){
+		catch (HibernateException | RollbackException | IllegalStateException  e){
+			if(transaction != null) {
+				transaction.rollback();
+			}
 			throw new DaoException("Failed to read user", e);
 		}
 		finally{
-			if (rSet != null){
-				try{
-					rSet.close();
-				}
-				catch (SQLException e){
-					throw new DaoException("Unable to close ResultSet", e);
-				}
-			}
+			closeSession(session);
 		}
 	}
 	
 	public void update(User user) throws DaoException{
+		Session session = null;
+		Transaction transaction = null;
 		try{
-			statementForUpdate.setString(1, user.getLogin());
-			statementForUpdate.setString(2, user.getPassword());
-			statementForUpdate.setString(3, user.getMail());
-			statementForUpdate.setBoolean(4, user.getIsActive());
-			statementForUpdate.setInt(5, user.getId());
-			statementForUpdate.executeUpdate();
+			session= HibernateUtil.getSessionFactory().openSession();
+			transaction = session.beginTransaction();
+			session.update(user);
+			transaction.commit();
 		}
-		catch (SQLException | NullPointerException e){
+		catch (HibernateException | RollbackException | IllegalStateException  e){
+			if(transaction != null) {
+				transaction.rollback();
+			}
 			throw new DaoException("Failed to update user", e);
+		}
+		finally{
+			closeSession(session);
 		}
 	}
 	
 	public void delete(int id) throws DaoException{
+		Session session = null;
+		Transaction transaction = null;
 		try {
-			statementForDelete.setInt(1, id);
-			statementForDelete.executeUpdate();
+			session= HibernateUtil.getSessionFactory().openSession();
+			transaction = session.beginTransaction();
+			Query <User> query= session.createQuery(queryForRead, User.class);
+			query.setParameter("id", id);
+			User user = (User) query.uniqueResult();
+			session.delete(user);
+			transaction.commit();
 		}
-		catch (SQLException | NullPointerException e){
+		catch (HibernateException | RollbackException | IllegalStateException  e){
+			if(transaction != null) {
+				transaction.rollback();
+			}
 			throw new DaoException("Failed to delete user", e);
+		}
+		finally{
+			closeSession(session);
 		}
 	}
 	
 	public User getByLogin(String login) throws DaoException{
-		ResultSet rSet = null;
+		Session session = null;
+		Transaction transaction = null;
 		User user = null;
 		try{
-			stmtForGetByLogin.setString(1, login);
-			rSet = stmtForGetByLogin.executeQuery();
-			if(rSet.next()) {
-				user = new User();
-				user.setId(rSet.getInt("id"));
-				user.setLogin(rSet.getString("login"));
-				user.setPassword(rSet.getString("pass"));
-				user.setMail(rSet.getString("mail"));
-				user.setIsActive(rSet.getBoolean("is_active"));
-			}
-		return user;
+			session= HibernateUtil.getSessionFactory().openSession();
+			transaction = session.beginTransaction();
+			Query <User> query= session.createQuery(queryForGetByLogin, User.class);
+			query.setParameter("login", login);
+			user = (User) query.uniqueResult();
+			return user;
 		}
-		catch (SQLException e){
-			throw new DaoException("Failed to read user", e);
+		catch (HibernateException | RollbackException | IllegalStateException  e){
+			if(transaction != null) {
+				transaction.rollback();
+			}
+			throw new DaoException("Failed to get user", e);
 		}
 		finally{
-			if (rSet != null){
-				try{
-					rSet.close();
-				}
-				catch (SQLException e){
-					throw new DaoException("Unable to close ResultSet", e);
-				}
-			}
+			closeSession(session);
 		}
 	}
 	
 	public void deactivate(int id) throws DaoException{
+		Session session = null;
+		Transaction transaction = null;
 		try {
-			statementForDeactivate.setInt(1, id);
-			statementForDeactivate.executeUpdate();
-		}catch (SQLException | NullPointerException e){
+			session= HibernateUtil.getSessionFactory().openSession();
+			transaction = session.beginTransaction();
+			Query <User> query= session.createQuery(queryForRead, User.class);
+			query.setParameter("id", id);
+			User user = (User) query.uniqueResult();
+			if(user == null) {
+				throw new DaoException("User doesn't exist");
+			}
+			user.setIsActive(false);
+			session.update(user);
+			transaction.commit();	
+		}
+		catch (HibernateException | RollbackException | IllegalStateException  e){
+			if(transaction != null) {
+				transaction.rollback();
+			}
 			throw new DaoException("Failed to deactivate user", e);
+		}
+		finally{
+			closeSession(session);
 		}
 	}
 	
-	public void close() throws DaoException{
-		DaoException exception = new DaoException("MySqlUserDao has been closed with exception(s)");
-		if(statementForInsert != null){
+	private void closeSession(Session session) throws DaoException{
+		if (session != null){
 			try{
-				statementForInsert.close();
+				session.close();
 			}
-			catch(SQLException e){
-				exception.addSuppressed(e);
+			catch (HibernateException e){
+				throw new DaoException("Unable to close Session", e);
 			}
-		}
-		
-		if(statementForRead != null){
-			try{
-				statementForRead.close();
-			}
-			catch(SQLException e){
-				exception.addSuppressed(e);
-			}
-		}
-		
-		if(statementForUpdate != null){
-			try{
-				statementForUpdate.close();
-			}
-			catch(SQLException e){
-				exception.addSuppressed(e);
-			}
-		}
-		
-		if(connection != null){
-			try{
-				connection.close();
-			}
-			catch(SQLException e){
-				exception.addSuppressed(e);
-			}
-		}
-		
-		Throwable[] suppressed = exception.getSuppressed();
-		if(suppressed.length > 0){
-			throw exception;
 		}
 	}
 }

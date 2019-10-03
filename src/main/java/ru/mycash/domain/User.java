@@ -1,14 +1,26 @@
 package ru.mycash.domain;
 
-public class User {
+import javax.persistence.*;
 
+@Entity
+@Table(name = "users")
+public class User {
+	
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	@Column(name = "id")
 	private Integer id;
+	@Column(name = "login")
 	private String login;
+	@Column(name = "pass")
 	private String password;
+	@Column(name = "mail")
 	private String mail;
+	@Column(name = "is_active")
 	private Boolean isActive;
 	
 	public User(){
+		
 	}
 	
 	public Integer getId() {

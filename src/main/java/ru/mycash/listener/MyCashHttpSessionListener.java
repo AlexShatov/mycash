@@ -38,20 +38,12 @@ public class MyCashHttpSessionListener implements HttpSessionListener{
 	}
 	
 	public void sessionDestroyed(HttpSessionEvent se) {
-		MySqlUserDao userDao = (MySqlUserDao) se.getSession().getAttribute("user_dao");
 		MySqlCountDao countDao = (MySqlCountDao) se.getSession().getAttribute("count_dao");
 		MySqlIncomeCategoryDao IncCategoryDao = (MySqlIncomeCategoryDao) se.getSession().getAttribute("income_cat_dao");
 		MySqlIncomeDao incomeDao = (MySqlIncomeDao) se.getSession().getAttribute("income_dao");
 		MySqlExpenseCategoryDao expCategoryDao = (MySqlExpenseCategoryDao) se.getSession().getAttribute("expense_cat_dao");
 		MySqlExpenseDao expenseDao = (MySqlExpenseDao) se.getSession().getAttribute("expense_dao");
 		ServletException listenerException = new ServletException("operation with user data failed");
-		if(userDao != null) {
-			try {
-				userDao.close();
-			}catch(DaoException e){
-				listenerException.addSuppressed(e);
-			}
-		}
 		if(countDao != null) {
 			try {
 				countDao.close();

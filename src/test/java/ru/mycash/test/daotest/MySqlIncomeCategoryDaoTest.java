@@ -87,20 +87,20 @@ public class MySqlIncomeCategoryDaoTest {
 	}
 	
 	@Test(dataProvider = "getGetAllData")
-	public void testGetAll(int userId, int countArraySize) throws DaoException{
+	public void testGetAll(int userId, int categoryArraySize) throws DaoException{
 		ArrayList<IncomeCategory> all = incomeCatDao.getAll(userId);
-		assertEquals((Integer)countArraySize, (Integer)all.size());
+		assertEquals((Integer)categoryArraySize, (Integer)all.size());
 	}
 	
 	@Test(dataProvider = "getGetAllActiveData")
-	public void testGetAllActive(int userId, int countArraySize) throws DaoException{
+	public void testGetAllActive(int userId, int categoryArraySize) throws DaoException{
 		IncomeCategory incomeCat = new IncomeCategory();
 		incomeCat.setCategoryName("new");
 		incomeCat.setUserId(1);
 		incomeCatDao.insert(incomeCat);
 		incomeCatDao.deactivate(incomeCat.getId());
 		ArrayList<IncomeCategory> allActive = incomeCatDao.getAllActive(userId);
-		assertEquals((Integer)countArraySize, (Integer)allActive.size());
+		assertEquals((Integer)categoryArraySize, (Integer)allActive.size());
 		incomeCatDao.delete(incomeCat.getId());
 	}
 	

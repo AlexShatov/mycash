@@ -12,6 +12,7 @@ repositories {
 dependencies {
     compile 'javax.servlet:javax.servlet-api:3.1.0'
     compile 'mysql:mysql-connector-java:8.0.16'
+    compile "org.hibernate:hibernate-core:5.4.6.Final"
     providedCompile 'javax.servlet:jsp-api:2.0'
     testCompile 'org.testng:testng:6.10'
 }
