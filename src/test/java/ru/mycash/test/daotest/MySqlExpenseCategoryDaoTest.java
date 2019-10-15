@@ -4,21 +4,25 @@ import static org.testng.AssertJUnit.*;
 import org.testng.annotations.*;
 import java.util.ArrayList;
 import ru.mycash.dao.MySqlExpenseCategoryDao;
+import ru.mycash.dao.MySqlUserDao;
 import ru.mycash.dao.DaoException;
 import ru.mycash.MySqlDaoFactory;
 import ru.mycash.domain.ExpenseCategory;
+import ru.mycash.domain.User;
 import ru.mycash.test.util.TestDbCleaner;
 
 public class MySqlExpenseCategoryDaoTest {
 
 	private MySqlDaoFactory factory = null;
 	private MySqlExpenseCategoryDao expenseCatDao = null;
+	private MySqlUserDao userDao = null;
 	private TestDbCleaner cleaner = null;
 	
 	@BeforeClass
 	public void initialize() throws DaoException{
 		factory = new MySqlDaoFactory();
 		expenseCatDao = factory.getMySqlExpenseCategoryDao();
+		userDao = factory.getMySqlUserDao();
 		cleaner = new TestDbCleaner();
 	}
 	
@@ -27,19 +31,12 @@ public class MySqlExpenseCategoryDaoTest {
 		cleaner.cleanExpenseCategories();
 	}
 	
-	@Test 
-	public void testInit() throws DaoException{
-		MySqlExpenseCategoryDao sqlExpenseCatDao = factory.getMySqlExpenseCategoryDao();
-		assertNotNull(sqlExpenseCatDao);
-		sqlExpenseCatDao.close();
-	}
-	
 	@Test
 	public void testRead() throws DaoException{
 		ExpenseCategory expenseCat = expenseCatDao.read(1);
 		assertEquals("testCategory", expenseCat.getCategoryName());
 		assertEquals((Boolean)true, expenseCat.getIsActive());
-		assertEquals((Integer)1, expenseCat.getUserId());
+		assertEquals((Integer)1, expenseCat.getUser().getId());
 	}
 	
 	@Test
@@ -53,7 +50,7 @@ public class MySqlExpenseCategoryDaoTest {
 		ExpenseCategory expenseCat = expenseCatDao.getByName(1, "testCategory");
 		assertEquals("testCategory", expenseCat.getCategoryName());
 		assertEquals((Boolean)true, expenseCat.getIsActive());
-		assertEquals((Integer)1, expenseCat.getUserId());
+		assertEquals((Integer)1, expenseCat.getUser().getId());
 	}
 	
 	@Test
@@ -65,13 +62,15 @@ public class MySqlExpenseCategoryDaoTest {
 	@Test
 	public void testInsert() throws DaoException{
 		ExpenseCategory expenseCat = new ExpenseCategory();
+		User user = userDao.read(1);
 		expenseCat.setCategoryName("new");
-		expenseCat.setUserId(1);
+		expenseCat.setIsActive(true);
+		expenseCat.setUser(user);
 		expenseCatDao.insert(expenseCat);
 		ExpenseCategory insertedExpenseCat = expenseCatDao.getByName(1, "new");
 		assertEquals(expenseCat.getId(), insertedExpenseCat.getId());
 		assertEquals("new", insertedExpenseCat.getCategoryName());
-		assertEquals((Integer)1, insertedExpenseCat.getUserId());
+		assertEquals((Integer)1, insertedExpenseCat.getUser().getId());
 		assertEquals((Boolean)true, insertedExpenseCat.getIsActive());
 		expenseCatDao.delete(insertedExpenseCat.getId());
 	}
@@ -79,8 +78,10 @@ public class MySqlExpenseCategoryDaoTest {
 	@Test
 	public void testDelete() throws DaoException{
 		ExpenseCategory expenseCat = new ExpenseCategory();
+		User user = userDao.read(1);
 		expenseCat.setCategoryName("new");
-		expenseCat.setUserId(1);
+		expenseCat.setIsActive(true);
+		expenseCat.setUser(user);
 		expenseCatDao.insert(expenseCat);
 		expenseCatDao.delete(expenseCat.getId());
 		assertNull(expenseCatDao.read(expenseCat.getId()));
@@ -95,8 +96,10 @@ public class MySqlExpenseCategoryDaoTest {
 	@Test(dataProvider = "getGetAllActiveData")
 	public void testGetAllActive(int userId, int categoryArraySize) throws DaoException{
 		ExpenseCategory expenseCat = new ExpenseCategory();
+		User user = userDao.read(1);
 		expenseCat.setCategoryName("new");
-		expenseCat.setUserId(1);
+		expenseCat.setIsActive(true);
+		expenseCat.setUser(user);
 		expenseCatDao.insert(expenseCat);
 		expenseCatDao.deactivate(expenseCat.getId());
 		ArrayList<ExpenseCategory> allActive = expenseCatDao.getAllActive(userId);
@@ -107,8 +110,10 @@ public class MySqlExpenseCategoryDaoTest {
 	@Test
 	public void testDeactivate() throws DaoException {
 		ExpenseCategory expenseCat = new ExpenseCategory();
+		User user = userDao.read(1);
 		expenseCat.setCategoryName("new");
-		expenseCat.setUserId(1);
+		expenseCat.setIsActive(true);
+		expenseCat.setUser(user);
 		expenseCatDao.insert(expenseCat);
 		expenseCatDao.deactivate(expenseCat.getId());
 		expenseCat = expenseCatDao.read(expenseCat.getId());
@@ -116,11 +121,18 @@ public class MySqlExpenseCategoryDaoTest {
 		expenseCatDao.delete(expenseCat.getId());
 	}
 	
+	@Test (expectedExceptions = DaoException.class)
+	public void testDeactivateNull() throws DaoException{
+		expenseCatDao.deactivate(2);
+	}
+	
 	@Test
 	public void testUpdate()throws DaoException{
 		ExpenseCategory expenseCat = new ExpenseCategory();
+		User user = userDao.read(1);
 		expenseCat.setCategoryName("new");
-		expenseCat.setUserId(1);
+		expenseCat.setIsActive(true);
+		expenseCat.setUser(user);
 		expenseCatDao.insert(expenseCat);
 		expenseCat = expenseCatDao.read(expenseCat.getId());
 		expenseCat.setCategoryName("updated");
@@ -130,27 +142,9 @@ public class MySqlExpenseCategoryDaoTest {
 		expenseCatDao.delete(updated.getId());
 	}
 	
-	@Test
-	public void testDeactivateNull() throws DaoException{
-		expenseCatDao.deactivate(2);
-		assertNull(expenseCatDao.read(2));
-	}
-	
-	@Test
-	public void testClose(){
-		try {
-			MySqlExpenseCategoryDao sqlExpenseCatDao = factory.getMySqlExpenseCategoryDao();
-			assertNotNull(sqlExpenseCatDao);
-			sqlExpenseCatDao.close();
-		}catch(DaoException e) {
-			fail("testClose() failed with exception");
-		}
-	}
-	
 	@AfterClass
 	public void closeRes() throws DaoException{
 		cleaner.close();
-		expenseCatDao.close();
 	}
 	
 	@DataProvider

@@ -1,14 +1,40 @@
 package ru.mycash.domain;
 
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.Table;
+
+@Entity
+@Table(name = "expense_categories")
+
 public class ExpenseCategory {
 	
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	@Column(name = "id")
 	private Integer id;
-	private String categoryName;
-	private Boolean isActive;
-	private Integer userId;
 	
-	public ExpenseCategory() {
-		
+	@Column(name = "category_name")
+	private String categoryName;
+	
+	@Column(name = "is_active")
+	private Boolean isActive;
+	
+	@ManyToOne
+	@JoinColumn(name = "user_id", referencedColumnName = "id")
+	private User user;
+	
+	public User getUser(){
+		return user;
+	}
+	
+	public void setUser(User user) {
+		this.user = user;
 	}
 	
 	public Integer getId() {
@@ -35,12 +61,7 @@ public class ExpenseCategory {
 		this.isActive = isActive;
 	}
 	
-	public Integer getUserId () {
-		return userId;
+	public ExpenseCategory() {
+		
 	}
-	
-	public void setUserId(Integer userId) {
-		this.userId = userId;
-	}
-
 }

@@ -2,18 +2,58 @@ package ru.mycash.domain;
 
 import java.util.Date;
 
-public class BudgetEntry {
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.Table;
 
-	private Integer id;
-	private Double amount;
-	private Date startDate;
-	private Date endDate;
-	private Integer expenseCatId;
-	private Integer userId;
+@Entity
+@Table(name = "budget")
+
+public class BudgetEntry {
 	
-	public BudgetEntry() {
-		
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	@Column(name = "id")
+	private Integer id;
+	
+	@Column(name = "amount")
+	private Double amount;
+	
+	@Column(name = "start_date")
+	private Date startDate;
+	
+	@Column(name = "end_date")
+	private Date endDate;
+	
+	@ManyToOne
+	@JoinColumn(name = "user_id", referencedColumnName = "id")
+	private User user;
+	
+	@ManyToOne
+	@JoinColumn(name = "expense_category_id", referencedColumnName = "id")
+	private ExpenseCategory expenseCategory;
+	
+	public User getUser() {
+		return user;
 	}
+	
+	public void setUser(User user) {
+		this.user = user;
+	}
+	
+	public ExpenseCategory getExpenseCategory() {
+		return expenseCategory;
+	}
+	
+	public void setExpenseCategory(ExpenseCategory expenseCategory) {
+		this.expenseCategory = expenseCategory;
+	}
+	
 	
 	public Integer getId() {
 		return id;
@@ -47,19 +87,7 @@ public class BudgetEntry {
 		this.endDate = endDate;
 	}
 	
-	public Integer getExpenseCatId() {
-		return expenseCatId;
-	}
-	
-	public void setExpenseCatId(Integer expenseCatId) {
-		this.expenseCatId = expenseCatId;
-	}
-	
-	public Integer getUserId() {
-		return userId;
-	}
-	
-	public void setUserId(Integer userId) {
-		this.userId = userId;
+	public BudgetEntry() {
+		
 	}
 }

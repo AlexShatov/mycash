@@ -19,6 +19,12 @@
 	<property name="hibernate.connection.password">
 	  1234
 	</property>
-	<mapping class="ru.mycash.domain.User"/> 
+	<mapping class="ru.mycash.domain.User"/>
+	<mapping class="ru.mycash.domain.Count"/>
+	<mapping class="ru.mycash.domain.IncomeCategory"/>   
+	<mapping class="ru.mycash.domain.ExpenseCategory"/> 
+	<mapping class="ru.mycash.domain.Income"/> 
+	<mapping class="ru.mycash.domain.Expense"/> 
+	<mapping class="ru.mycash.domain.BudgetEntry"/> 
   </session-factory>
 </hibernate-configuration>

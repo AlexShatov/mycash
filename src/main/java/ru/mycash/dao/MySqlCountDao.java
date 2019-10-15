@@ -1,304 +1,216 @@
 package ru.mycash.dao;
 
-import java.sql.*;
-import java.io.*;
-import java.util.*;
+import javax.persistence.RollbackException;
+
+import org.hibernate.HibernateException;
+import org.hibernate.Session;
+import org.hibernate.query.Query;
+import org.hibernate.Transaction;
+
+import ru.mycash.util.HibernateUtil;
 
 import ru.mycash.domain.Count;
 
-public class MySqlCountDao implements AutoCloseable{
-	private Connection connection;
-	private static final String queryForInsert = "insert into counts "
-			+ "(count_name, balance, currency, is_active, user_id) values (?, ?, ?, true, ?)";	
-	private static final String queryForUpdate = "update counts set "
-			+ "count_name = ?, balance = ?, currency = ?, is_active = ?, user_id = ? where id = ?";
-	private static final String queryForGetAll = "select id, count_name, balance, currency, is_active, user_id"
-			+ " from counts";
-	private static final String queryForDeactivate  = "update counts set is_active = false where id = ?";
-	private static final String queryForDelete  ="delete from counts where id = ?";
+import java.util.ArrayList;
 
-	private PreparedStatement statementForInsert;
-	private PreparedStatement statementForRead;
-	private PreparedStatement statementForUpdate;
-	private PreparedStatement statementForGetAll;
-	private PreparedStatement statementForGetAllActive;
-	private PreparedStatement statementForDeactivate;
-	private PreparedStatement statementForGetByName;
-	private PreparedStatement statementForDelete;
+public class MySqlCountDao{
 	
-	public MySqlCountDao() throws DaoException{
-		try(InputStream input = MySqlUserDao.class.getClassLoader().getResourceAsStream("mycash_db.properties")){
-			Properties properties = new Properties();
-			properties.load(input);
-			String url = properties.getProperty("url");
-			String username = properties.getProperty("user");
-			String password = properties.getProperty("password");
-			connection = DriverManager.getConnection(url, username, password);
-			statementForInsert = connection.prepareStatement(queryForInsert, Statement.RETURN_GENERATED_KEYS);
-			statementForRead = connection.prepareStatement(queryForGetAll + " where id = ?");
-			statementForUpdate = connection.prepareStatement(queryForUpdate);
-			statementForGetAll = connection.prepareStatement(queryForGetAll + " where user_id = ?");
-			statementForGetAllActive = connection.prepareStatement(queryForGetAll + " where is_active = true and user_id = ?");
-			statementForDeactivate = connection.prepareStatement(queryForDeactivate);
-			statementForGetByName = connection.prepareStatement(queryForGetAll + " where count_name = ? and user_id = ?");
-			statementForDelete = connection.prepareStatement(queryForDelete);
-		}
-		catch(SQLException | IOException | NullPointerException e) {
-			throw new DaoException("Failed to create MySqlCountDao object", e);
-		}
-	}
+	private static final String queryForRead = "from Count where id =:id ";	
+	private static final String queryForGetAll = "from Count where user_id =:user_id";
+	private static final String queryForGetAllActive = "from Count where user_id =:user_id and is_active = true";
+	private static final String queryForGetByName = "from Count where count_name=:count_name and user_id =:user_id";
 	
 	public void insert (Count count) throws DaoException{
-		ResultSet rSet = null;
+		Session session = null;
+		Transaction transaction = null;
 		try {
-			statementForInsert.setString(1, count.getCountName());
-			statementForInsert.setDouble(2, count.getBalance());
-			statementForInsert.setString(3, count.getCurrency());
-			statementForInsert.setInt(4, count.getUserId());
-			statementForInsert.executeUpdate();
-			rSet = statementForInsert.getGeneratedKeys();
-			Integer recordId;
-			if (rSet.next()) {
-				recordId = rSet.getInt(1);
-				count.setId(recordId);
-			}
+			session = HibernateUtil.getSessionFactory().openSession();
+			transaction = session.beginTransaction();
+			session.save(count);
+			transaction.commit();
 		}
-		catch (SQLException e){
+		catch (HibernateException | RollbackException | IllegalStateException  e){
+			if(transaction != null) {
+				transaction.rollback();
+			}
 			throw new DaoException("Failed to insert count", e);
 		}
 		finally{
-			closeResultSet(rSet);
+			closeSession(session);
 		}
 	}
 	
 	public Count read(int id) throws DaoException{
-		ResultSet rSet = null;
+		Session session = null;
+		Transaction transaction = null;
+		Count count = null;
 		try{
-			statementForRead.setInt(1, id);
-			rSet = statementForRead.executeQuery();
-			if(rSet.next()) {
-				Count count = new Count();
-				count.setId(rSet.getInt("id"));
-				count.setCountName(rSet.getString("count_name"));
-				count.setBalance(rSet.getDouble("balance"));
-				count.setCurrency(rSet.getString("currency"));
-				count.setIsActive(rSet.getBoolean("is_active"));
-				count.setUserId(rSet.getInt("user_id"));
-				return count;
-			} else {
-				return null;
-			}
+			session = HibernateUtil.getSessionFactory().openSession();
+			transaction = session.beginTransaction();
+			Query <Count> query= session.createQuery(queryForRead, Count.class);
+			query.setParameter("id", id);
+			count = (Count) query.uniqueResult();
+			transaction.commit();
+			return count;
 		}
-		catch (SQLException e){
+		catch (HibernateException | RollbackException | IllegalStateException  e){
+			if(transaction != null) {
+				transaction.rollback();
+			}
 			throw new DaoException("Failed to read count", e);
 		}
 		finally{
-			closeResultSet(rSet);
+			closeSession(session);
 		}
 	}
 	
 	public void update(Count count) throws DaoException{
+		Session session = null;
+		Transaction transaction = null;
 		try{
-			statementForUpdate.setString(1, count.getCountName());
-			statementForUpdate.setDouble(2, count.getBalance());
-			statementForUpdate.setString(3, count.getCurrency());
-			statementForUpdate.setBoolean(4, count.getIsActive());
-			statementForUpdate.setInt(5, count.getUserId());
-			statementForUpdate.setInt(6, count.getId());
-			statementForUpdate.executeUpdate();
+			session = HibernateUtil.getSessionFactory().openSession();
+			transaction = session.beginTransaction();
+			session.update(count);
+			transaction.commit();
 		}
-		catch (SQLException | NullPointerException e){
+		catch (HibernateException | RollbackException | IllegalStateException  e){
+			if(transaction != null) {
+				transaction.rollback();
+			}
 			throw new DaoException("Failed to update count", e);
+		}
+		finally{
+			closeSession(session);
 		}
 	}
 	
-	
-	public ArrayList<Count> getAll(int userId) throws DaoException{
-		ResultSet rSet = null;
+	public void delete(int countId) throws DaoException{
+		Session session = null;
+		Transaction transaction = null;
 		try{
-			ArrayList<Count> result = new ArrayList<>();
-			statementForGetAll.setInt(1, userId);
-			rSet = statementForGetAll.executeQuery();
-			while(rSet.next()){
-				Count count = new Count();
-				count.setId(rSet.getInt("id"));
-				count.setCountName(rSet.getString("count_name"));
-				count.setBalance(rSet.getDouble("balance"));
-				count.setCurrency(rSet.getString("currency"));
-				count.setIsActive(rSet.getBoolean("is_active"));
-				count.setUserId(rSet.getInt("user_id"));
-				result.add(count);
-			}
-			return result;
+			session = HibernateUtil.getSessionFactory().openSession();
+			transaction = session.beginTransaction();
+			Query <Count> query= session.createQuery(queryForRead, Count.class);
+			query.setParameter("id", countId);
+			Count count = (Count) query.uniqueResult();
+			session.delete(count);
+			transaction.commit();
 		}
-		catch(SQLException e){
-			throw new DaoException("Failed to get all counts", e);
+		catch (HibernateException | RollbackException | IllegalStateException  e){
+			if(transaction != null) {
+				transaction.rollback();
+			}
+			throw new DaoException("Failed to delete count", e);
 		}
 		finally{
-			closeResultSet(rSet);
+			closeSession(session);
+		}
+	} 
+	
+	public ArrayList<Count> getAll(int userId) throws DaoException{
+		Session session = null;
+		Transaction transaction = null;
+		ArrayList<Count> result = null;
+		try{
+			session = HibernateUtil.getSessionFactory().openSession();
+			transaction = session.beginTransaction();
+			Query <Count> query= session.createQuery(queryForGetAll, Count.class);
+			query.setParameter("user_id", userId);
+			result = (ArrayList)query.list();
+			return result;
+		}
+		catch (HibernateException | RollbackException | IllegalStateException  e){
+			if(transaction != null) {
+				transaction.rollback();
+			}
+			throw new DaoException("Failed to get all counts for user", e);
+		}
+		finally{
+			closeSession(session);
 		}
 	}
 	
 	public ArrayList<Count> getAllActive(int userId) throws DaoException{
-		ResultSet rSet = null;
+		Session session = null;
+		Transaction transaction = null;
+		ArrayList<Count> result = null;
 		try{
-			ArrayList<Count> result = new ArrayList<>();
-			statementForGetAllActive.setInt(1, userId);
-			rSet = statementForGetAllActive.executeQuery();
-			while(rSet.next()){
-				Count count = new Count();
-				count.setId(rSet.getInt("id"));
-				count.setCountName(rSet.getString("count_name"));
-				count.setBalance(rSet.getDouble("balance"));
-				count.setCurrency(rSet.getString("currency"));
-				count.setIsActive(rSet.getBoolean("is_active"));
-				count.setUserId(rSet.getInt("user_id"));
-				result.add(count);
-			}
+			session = HibernateUtil.getSessionFactory().openSession();
+			transaction = session.beginTransaction();
+			Query <Count> query= session.createQuery(queryForGetAllActive, Count.class);
+			query.setParameter("user_id", userId);
+			result = (ArrayList)query.list();
 			return result;
 		}
-		catch(SQLException e){
-			throw new DaoException("Failed to get all active counts", e);
+		catch (HibernateException | RollbackException | IllegalStateException  e){
+			if(transaction != null) {
+				transaction.rollback();
+			}
+			throw new DaoException("Failed to get all active counts for user", e);
 		}
 		finally{
-			closeResultSet(rSet);
+			closeSession(session);
 		}
 	}
 	
 	public Count getByName(String countName, int userId) throws DaoException{
-		ResultSet rSet = null;
-		try {
-			statementForGetByName.setString(1, countName);
-			statementForGetByName.setInt(2, userId);
-			rSet = statementForGetByName.executeQuery();
-			Count count = null;
-			if(rSet.next()) {
-				count = new Count();
-				count.setId(rSet.getInt("id"));
-				count.setCountName(rSet.getString("count_name"));
-				count.setBalance(rSet.getDouble("balance"));
-				count.setCurrency(rSet.getString("currency"));
-				count.setIsActive(rSet.getBoolean("is_active"));
-				count.setUserId(rSet.getInt("user_id"));
-			}
+		Session session = null;
+		Transaction transaction = null;
+		Count count = null;
+		try{
+			session = HibernateUtil.getSessionFactory().openSession();
+			transaction = session.beginTransaction();
+			Query <Count> query= session.createQuery(queryForGetByName, Count.class);
+			query.setParameter("count_name", countName);
+			query.setParameter("user_id", userId);
+			count = (Count) query.uniqueResult();
 			return count;
 		}
-		catch(SQLException e) {
-			throw new DaoException("Failed to read count", e);
+		catch (HibernateException | RollbackException | IllegalStateException  e){
+			if(transaction != null) {
+				transaction.rollback();
+			}
+			throw new DaoException("Failed to get count by name", e);
 		}
 		finally{
-			closeResultSet(rSet);
+			closeSession(session);
 		}
 	}
 	
 	public void deactivate(int countId) throws DaoException{
+		Session session = null;
+		Transaction transaction = null;
 		try {
-			statementForDeactivate.setInt(1, countId);
-			statementForDeactivate.executeUpdate();
-		} 
-		catch(SQLException e) {
+			session = HibernateUtil.getSessionFactory().openSession();
+			transaction = session.beginTransaction();
+			Query <Count> query= session.createQuery(queryForRead, Count.class);
+			query.setParameter("id", countId);
+			Count count = (Count) query.uniqueResult();
+			if(count == null) {
+				throw new DaoException("Count doesn't exist");
+			}
+			count.setIsActive(false);
+			session.update(count);
+			transaction.commit();	
+		}
+		catch (HibernateException | RollbackException | IllegalStateException  e){
+			if(transaction != null) {
+				transaction.rollback();
+			}
 			throw new DaoException("Failed to deactivate count", e);
 		}
-		
-	}
-	
-	public void delete(int countId) throws DaoException{
-		try{
-			statementForDelete.setInt(1, countId);
-			statementForDelete.executeUpdate();
-		}
-		catch(SQLException e) {
-			throw new DaoException("Failed to delete count", e);
-		}
-	} 
-	
-	public void close() throws DaoException{
-		DaoException exception = new DaoException("MySqlCountDao has been closed with exception(s)");
-		if(statementForInsert != null){
-			try{
-				statementForInsert.close();
-			}
-			catch(SQLException e){
-				exception.addSuppressed(e);
-			}
-		}
-		
-		if(statementForRead != null){
-			try{
-				statementForRead.close();
-			}
-			catch(SQLException e){
-				exception.addSuppressed(e);
-			}
-		}
-		
-		if(statementForUpdate != null){
-			try{
-				statementForUpdate.close();
-			}
-			catch(SQLException e){
-				exception.addSuppressed(e);
-			}
-		}
-		
-		if(statementForGetAll != null){
-			try{
-				statementForGetAll.close();
-			}
-			catch(SQLException e){
-				exception.addSuppressed(e);
-			}
-		}
-		
-		if(statementForGetAllActive != null){
-			try{
-				statementForGetAllActive.close();
-			}
-			catch(SQLException e){
-				exception.addSuppressed(e);
-			}
-		}
-		
-		if(statementForDeactivate != null){
-			try{
-				statementForDeactivate.close();
-			}
-			catch(SQLException e){
-				exception.addSuppressed(e);
-			}
-		}
-		
-		if(statementForGetByName != null){
-			try{
-				statementForGetByName.close();
-			}
-			catch(SQLException e){
-				exception.addSuppressed(e);
-			}
-		}
-		
-		if(connection != null){
-			try{
-				connection.close();
-			}
-			catch(SQLException e){
-				exception.addSuppressed(e);
-			}
-		}
-		
-		Throwable[] suppressed = exception.getSuppressed();
-		if(suppressed.length > 0){
-			throw exception;
+		finally{
+			closeSession(session);
 		}
 	}
 	
-	private void closeResultSet(ResultSet rSet) throws DaoException{
-		if (rSet != null){
+	private void closeSession(Session session) throws DaoException{
+		if (session != null){
 			try{
-				rSet.close();
+				session.close();
 			}
-			catch (SQLException e){
-				throw new DaoException("Unable to close ResultSet", e);
+			catch (HibernateException e){
+				throw new DaoException("Unable to close Session", e);
 			}
 		}
 	}

@@ -19,7 +19,7 @@ public class MySqlUserDao{
 		Session session = null;
 		Transaction transaction = null;
 		try {
-			session= HibernateUtil.getSessionFactory().openSession();
+			session = HibernateUtil.getSessionFactory().openSession();
 			transaction = session.beginTransaction();
 	        session.save(user);
 	        transaction.commit();
@@ -40,7 +40,7 @@ public class MySqlUserDao{
 		Transaction transaction = null;
 		User user = null;
 		try{
-			session= HibernateUtil.getSessionFactory().openSession();
+			session = HibernateUtil.getSessionFactory().openSession();
 			transaction = session.beginTransaction();
 			Query <User> query= session.createQuery(queryForRead, User.class);
 			query.setParameter("id", id);
@@ -63,7 +63,7 @@ public class MySqlUserDao{
 		Session session = null;
 		Transaction transaction = null;
 		try{
-			session= HibernateUtil.getSessionFactory().openSession();
+			session = HibernateUtil.getSessionFactory().openSession();
 			transaction = session.beginTransaction();
 			session.update(user);
 			transaction.commit();
@@ -83,7 +83,7 @@ public class MySqlUserDao{
 		Session session = null;
 		Transaction transaction = null;
 		try {
-			session= HibernateUtil.getSessionFactory().openSession();
+			session = HibernateUtil.getSessionFactory().openSession();
 			transaction = session.beginTransaction();
 			Query <User> query= session.createQuery(queryForRead, User.class);
 			query.setParameter("id", id);
@@ -107,7 +107,7 @@ public class MySqlUserDao{
 		Transaction transaction = null;
 		User user = null;
 		try{
-			session= HibernateUtil.getSessionFactory().openSession();
+			session = HibernateUtil.getSessionFactory().openSession();
 			transaction = session.beginTransaction();
 			Query <User> query= session.createQuery(queryForGetByLogin, User.class);
 			query.setParameter("login", login);
@@ -129,7 +129,7 @@ public class MySqlUserDao{
 		Session session = null;
 		Transaction transaction = null;
 		try {
-			session= HibernateUtil.getSessionFactory().openSession();
+			session = HibernateUtil.getSessionFactory().openSession();
 			transaction = session.beginTransaction();
 			Query <User> query= session.createQuery(queryForRead, User.class);
 			query.setParameter("id", id);

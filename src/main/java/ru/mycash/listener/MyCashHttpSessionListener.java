@@ -38,49 +38,6 @@ public class MyCashHttpSessionListener implements HttpSessionListener{
 	}
 	
 	public void sessionDestroyed(HttpSessionEvent se) {
-		MySqlCountDao countDao = (MySqlCountDao) se.getSession().getAttribute("count_dao");
-		MySqlIncomeCategoryDao IncCategoryDao = (MySqlIncomeCategoryDao) se.getSession().getAttribute("income_cat_dao");
-		MySqlIncomeDao incomeDao = (MySqlIncomeDao) se.getSession().getAttribute("income_dao");
-		MySqlExpenseCategoryDao expCategoryDao = (MySqlExpenseCategoryDao) se.getSession().getAttribute("expense_cat_dao");
-		MySqlExpenseDao expenseDao = (MySqlExpenseDao) se.getSession().getAttribute("expense_dao");
-		ServletException listenerException = new ServletException("operation with user data failed");
-		if(countDao != null) {
-			try {
-				countDao.close();
-			}catch(DaoException e) {
-				listenerException.addSuppressed(e);
-			}
-		}
-		if(IncCategoryDao != null) {
-			try {
-				IncCategoryDao.close();
-			}catch(DaoException e) {
-				listenerException.addSuppressed(e);
-			}
-		}
-		if(incomeDao != null) {
-			try {
-				incomeDao.close();
-			}catch(DaoException e) {
-				listenerException.addSuppressed(e);
-			}
-		}
-		if(expenseDao != null) {
-			try {
-				expenseDao.close();
-			}catch(DaoException e) {
-				listenerException.addSuppressed(e);
-			}
-		}
-		if(expCategoryDao != null) {
-			try {
-				expCategoryDao.close();
-			}catch(DaoException e) {
-				listenerException.addSuppressed(e);
-			}
-		}
-		if(listenerException.getSuppressed().length != 0) {
-			se.getSession().setAttribute("listenerException", listenerException);
-		}
+		
 	}
 }

@@ -4,9 +4,11 @@ import static org.testng.AssertJUnit.*;
 import org.testng.annotations.*;
 import java.util.ArrayList;
 import ru.mycash.dao.MySqlCountDao;
+import ru.mycash.dao.MySqlUserDao;
 import ru.mycash.dao.DaoException;
 import ru.mycash.MySqlDaoFactory;
 import ru.mycash.domain.Count;
+import ru.mycash.domain.User;
 import ru.mycash.test.util.TestDbCleaner;
 
 
@@ -15,24 +17,19 @@ public class MySqlCountDaoTest {
 	private MySqlDaoFactory factory = null;
 	private MySqlCountDao countDao = null;
 	private TestDbCleaner cleaner = null;
+	private MySqlUserDao userDao = null;
 	
 	@BeforeClass
 	public void initialize() throws DaoException{
 		factory = new MySqlDaoFactory();
 		countDao = factory.getMySqlCountDao();
+		userDao = factory.getMySqlUserDao();
 		cleaner = new TestDbCleaner();
 	}
 	
 	@BeforeMethod
 	public void cleanDb() throws DaoException{
 		cleaner.cleanCounts();
-	}
-
-	@Test 
-	public void testInit() throws DaoException{
-		MySqlCountDao sqlCountDao = factory.getMySqlCountDao();
-		assertNotNull(sqlCountDao);
-		sqlCountDao.close();
 	}
 	
 	@Test
@@ -43,7 +40,7 @@ public class MySqlCountDaoTest {
 		assertEquals("BYN", count.getCurrency());
 		assertEquals((Integer)1, count.getId());
 		assertEquals((Boolean)true, count.getIsActive());
-		assertEquals((Integer)1, count.getUserId());
+		assertEquals((Integer)1, count.getUser().getId());
 	}
 	
 	@Test
@@ -53,6 +50,22 @@ public class MySqlCountDaoTest {
 	}	
 	
 	@Test
+	public void testUpdate() throws DaoException{
+		User user = userDao.read(1);
+		Count count = new Count();
+		count.setCountName("test");
+		count.setBalance(45.52);
+		count.setIsActive(true);
+		count.setCurrency("USD");
+		count.setUser(user);
+		countDao.insert(count);
+		count.setCurrency("BYN");
+		countDao.update(count);
+		assertEquals("BYN", count.getCurrency());
+		countDao.delete(count.getId());
+	}
+	
+	@Test
 	public void testGetByName() throws DaoException{
 		Count count = countDao.getByName("testCount", 1);
 		assertEquals("testCount", count.getCountName());
@@ -60,7 +73,7 @@ public class MySqlCountDaoTest {
 		assertEquals("BYN", count.getCurrency());
 		assertEquals((Integer)1, count.getId());
 		assertEquals((Boolean)true, count.getIsActive());
-		assertEquals((Integer)1, count.getUserId());
+		assertEquals((Integer)1, count.getUser().getId());
 	}
 	
 	@Test
@@ -72,27 +85,31 @@ public class MySqlCountDaoTest {
 	@Test
 	public void testInsert() throws DaoException{
 		Count count = new Count();
+		User user = userDao.read(1);
 		count.setCountName("test");
 		count.setBalance(45.52);
+		count.setIsActive(true);
 		count.setCurrency("USD");
-		count.setUserId(1);
+		count.setUser(user);
 		countDao.insert(count);
 		Count insertedCount = countDao.getByName("test", 1);
 		assertEquals(count.getId(), insertedCount.getId());
 		assertEquals("test", insertedCount.getCountName());
 		assertEquals(45.52, insertedCount.getBalance());
 		assertEquals((Boolean)true, insertedCount.getIsActive());
-		assertEquals((Integer)1, insertedCount.getUserId());
+		assertEquals((Integer)1, insertedCount.getUser().getId());
 		countDao.delete(insertedCount.getId());
 	}
 	
 	@Test
 	public void testDeactivate() throws DaoException {
 		Count count = new Count();
+		User user = userDao.read(1);
 		count.setCountName("test");
 		count.setBalance(45.52);
+		count.setIsActive(true);
 		count.setCurrency("USD");
-		count.setUserId(1);
+		count.setUser(user);
 		countDao.insert(count);
 		countDao.deactivate(count.getId());
 		count = countDao.read(count.getId());
@@ -100,10 +117,9 @@ public class MySqlCountDaoTest {
 		countDao.delete(count.getId());
 	}
 	
-	@Test
+	@Test (expectedExceptions = DaoException.class)
 	public void testDeactivateNull() throws DaoException{
 		countDao.deactivate(2);
-		assertNull(countDao.read(2));
 	}
 	
 	@Test(dataProvider = "getGetAllData")
@@ -115,10 +131,12 @@ public class MySqlCountDaoTest {
 	@Test(dataProvider = "getGetAllActiveData")
 	public void testGetAllActive(int userId, int countArraySize) throws DaoException{
 		Count count = new Count();
+		User user = userDao.read(1);
 		count.setCountName("test");
 		count.setBalance(45.52);
+		count.setIsActive(true);
 		count.setCurrency("USD");
-		count.setUserId(1);
+		count.setUser(user);
 		countDao.insert(count);
 		countDao.deactivate(count.getId());
 		ArrayList<Count> allActive = countDao.getAllActive(userId);
@@ -128,32 +146,23 @@ public class MySqlCountDaoTest {
 	
 	@Test
 	public void testDelete() throws DaoException{
+		int countId;
 		Count count = new Count();
+		User user = userDao.read(1);
 		count.setCountName("test");
 		count.setBalance(45.52);
+		count.setIsActive(true);
 		count.setCurrency("USD");
-		count.setUserId(1);
+		count.setUser(user);
 		countDao.insert(count);
-		countDao.delete(count.getId());
-		assertNull(countDao.read(count.getId()));
-	}
-	
-
-	@Test
-	public void testClose(){
-		try {
-			MySqlCountDao sqlCountDao = factory.getMySqlCountDao();
-			assertNotNull(sqlCountDao);
-			sqlCountDao.close();
-		}catch(DaoException e) {
-			fail("testClose() failed with exception");
-		}
+		countId = count.getId();
+		countDao.delete(countId);
+		assertNull(countDao.read(countId));
 	}
 	
 	@AfterClass
 	public void closeRes() throws DaoException{
 		cleaner.close();
-		countDao.close();
 	}
 	
 	@DataProvider

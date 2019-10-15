@@ -2,19 +2,65 @@ package ru.mycash.domain;
 
 import java.util.Date;
 
+import javax.persistence.*;
+
+
+@Entity
+@Table(name = "incomes")
+
 public class Income {
 
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	@Column(name = "id")
 	private Integer id;
+	
+	@Column(name = "amount")
 	private Double amount;
+	
+	@Column(name = "annotation")
 	private String annotation;
+	
+	@Column(name = "inc_date")
 	private Date incDate;
+	
+	@Column(name = "is_active")
 	private Boolean isActive;
-	private Integer incomeCatId;
-	private Integer countId;
-	private Integer userId;
 	
-	public Income() {
+	@ManyToOne
+	@JoinColumn(name = "user_id", referencedColumnName = "id")
+	private User user;
 	
+	@ManyToOne
+	@JoinColumn(name = "income_category_id", referencedColumnName = "id")
+	private IncomeCategory incomeCategory;
+	
+	@ManyToOne
+	@JoinColumn(name = "count_id", referencedColumnName = "id")
+	private Count count;
+
+	public User getUser() {
+		return user;
+	}
+	
+	public void setUser(User user) {
+		this.user = user;
+	}
+	
+	public IncomeCategory getIncomeCategory() {
+		return incomeCategory;
+	}
+	
+	public void setIncomeCategory(IncomeCategory incomeCategory) {
+		this.incomeCategory = incomeCategory;
+	}
+	
+	public Count getCount() {
+		return count;
+	}
+	
+	public void setCount(Count count) {
+		this.count = count;
 	}
 	
 	public Integer getId() {
@@ -57,27 +103,7 @@ public class Income {
 		this.isActive = isActive;
 	}
 	
-	public Integer getIncomeCatId() {
-		return incomeCatId;
-	}
+	public Income() {
 	
-	public void setIncomeCatId(Integer incomeCatId) {
-		this.incomeCatId = incomeCatId;
-	}
-	
-	public Integer getCountId() {
-		return countId;
-	}
-	
-	public void setCountId(Integer countId) {
-		this.countId = countId;
-	}
-	
-	public Integer getUserId() {
-		return userId;
-	}
-	
-	public void setUserId(Integer userId) {
-		this.userId = userId;
 	}
 }

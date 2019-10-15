@@ -9,7 +9,6 @@ public class MySqlDaoFactory {
     public MySqlDaoFactory() throws DaoException{
         try {
             Class.forName(driver).getDeclaredConstructor().newInstance();
-            System.out.println("Driver loading succesful!");
         }
         catch(Exception e){
             throw new DaoException("Failed to create DAOfactory",e);
@@ -20,57 +19,27 @@ public class MySqlDaoFactory {
             return new MySqlUserDao();
     }
 
-    public MySqlIncomeDao getMySqlIncomeDao() throws  DaoException{
-        try{
-            return  new MySqlIncomeDao();
-        }
-        catch (DaoException e){
-            throw e;
-        }
+    public MySqlIncomeDao getMySqlIncomeDao(){
+            return new MySqlIncomeDao();
     }
 
-    public MySqlCountDao getMySqlCountDao() throws DaoException{
-        try{
+    public MySqlCountDao getMySqlCountDao(){
             return  new MySqlCountDao();
-        }
-        catch (DaoException e){
-            throw e;
-        }
     }
     
     public MySqlExpenseDao getMySqlExpenseDao() throws  DaoException{
-        try{
             return  new MySqlExpenseDao();
-        }
-        catch (DaoException e){
-            throw e;
-        }
     }
     
-    public MySqlIncomeCategoryDao getMySqlIncomeCategoryDao() throws  DaoException{
-        try{
-            return  new MySqlIncomeCategoryDao();
-        }
-        catch (DaoException e){
-            throw e;
-        }
+    public MySqlIncomeCategoryDao getMySqlIncomeCategoryDao(){
+        return  new MySqlIncomeCategoryDao();
     }
     
-    public MySqlExpenseCategoryDao getMySqlExpenseCategoryDao() throws  DaoException{
-        try{
-            return  new MySqlExpenseCategoryDao();
-        }
-        catch (DaoException e){
-            throw e;
-        }
+    public MySqlExpenseCategoryDao getMySqlExpenseCategoryDao(){
+    	return  new MySqlExpenseCategoryDao();
     }
     
     public MySqlBudgetDao getMySqlBudgetDao() throws  DaoException{
-        try{
             return  new MySqlBudgetDao();
-        }
-        catch (DaoException e){
-            throw e;
-        }
     }
 }

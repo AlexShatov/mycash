@@ -121,8 +121,8 @@
 			    MySqlIncomeCategoryDao categoryDao = (MySqlIncomeCategoryDao)session.getAttribute("income_cat_dao");
 			    out.println("<table>");
 			    for(int i=0; i<incomes.size(); i++){
-			    	int countId = incomes.get(i).getCountId();
-			    	int categoryId = incomes.get(i).getIncomeCatId();
+			    	int countId = incomes.get(i).getCount().getId();
+			    	int categoryId = incomes.get(i).getIncomeCategory().getId();
 			    	String countName = countDao.read(countId).getCountName();
 			    	String categoryName = categoryDao.read(categoryId).getCategoryName();
 			    	out.println("<tr><td align=\"left\" width=\"180\">" + incomes.get(i).getAnnotation() + "</td>" +

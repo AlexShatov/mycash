@@ -41,6 +41,7 @@ count_id int(10) not null,
 user_id int(10) not null,
 foreign key (income_category_id) references income_categories (id) ,
 foreign key (count_id) references counts(id),
+foreign key (user_id) references users(id),
 primary key (id)
 );
 
@@ -64,6 +65,7 @@ count_id int(10) not null,
 user_id int(10) not null,
 foreign key (expense_category_id) references expense_categories (id),
 foreign key (count_id) references counts(id),
+foreign key (user_id) references users(id),
 primary key (id)
 );
 

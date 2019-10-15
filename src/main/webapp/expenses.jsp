@@ -121,8 +121,8 @@
 			    MySqlExpenseCategoryDao categoryDao = (MySqlExpenseCategoryDao)session.getAttribute("expense_cat_dao");
 			    out.println("<table>");
 			    for(int i=0; i<expenses.size(); i++){
-			    	int countId = expenses.get(i).getCountId();
-			    	int categoryId = expenses.get(i).getExpenseCatId();
+			    	int countId = expenses.get(i).getCount().getId();
+			    	int categoryId = expenses.get(i).getExpenseCategory().getId();
 			    	String countName = countDao.read(countId).getCountName();
 			    	String categoryName = categoryDao.read(categoryId).getCategoryName();
 			    	out.println("<tr><td align=\"left\" width=\"180\">" + expenses.get(i).getAnnotation() + "</td>" +

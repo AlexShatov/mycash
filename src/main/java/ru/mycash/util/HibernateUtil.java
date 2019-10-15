@@ -8,7 +8,7 @@ public class HibernateUtil {
 	
 	private static SessionFactory factory = buildFactory();
 	
-	public static SessionFactory buildFactory() throws HibernateException{
+	private static SessionFactory buildFactory() throws HibernateException{
 		try {
 			return new Configuration().configure().buildSessionFactory();
 		}

@@ -1,14 +1,33 @@
 package ru.mycash.domain;
 
+import javax.persistence.*;
+
+@Entity
+@Table(name = "income_categories")
+
 public class IncomeCategory {
 
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	@Column(name = "id")
 	private Integer id;
-	private String categoryName;
-	private Boolean isActive;
-	private Integer userId;
 	
-	public IncomeCategory() {
-		
+	@Column(name = "category_name")
+	private String categoryName;
+	
+	@Column(name = "is_active")
+	private Boolean isActive;
+	
+	@ManyToOne
+	@JoinColumn(name = "user_id", referencedColumnName = "id")
+	private User user;
+	
+	public User getUser(){
+		return user;
+	}
+	
+	public void setUser(User user) {
+		this.user = user;
 	}
 	
 	public Integer getId() {
@@ -35,11 +54,7 @@ public class IncomeCategory {
 		this.isActive = isActive;
 	}
 	
-	public Integer getUserId () {
-		return userId;
-	}
-	
-	public void setUserId(Integer userId) {
-		this.userId = userId;
+	public IncomeCategory() {
+		
 	}
 }

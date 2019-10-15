@@ -249,18 +249,17 @@ public class MyCashServlet extends HttpServlet{
 		User loginedUser = (User)req.getSession().getAttribute("loginedUser");
 		int userId = loginedUser.getId();
 		String annotation = req.getParameter("annotation");
-		String category = req.getParameter("category");
+		String categoryName = req.getParameter("category");
 		String countName = req.getParameter("count");
 		String amountStr = req.getParameter("amount");
 		String dateStr = req.getParameter("date");
 		if(matcher.matchName(annotation)) {
-			if(matcher.matchName(category)) {
+			if(matcher.matchName(categoryName)) {
 				if(matcher.matchName(countName)) {
 					if(matcher.matchAmount(amountStr)) {
 						if(matcher.matchDate(dateStr)) {
-							int categoryId = incomeCategoryDao.getByName(userId, category).getId();
+							IncomeCategory incomeCategory = incomeCategoryDao.getByName(userId, categoryName);
 							Count count = countDao.getByName(countName, userId);
-							int countId = count.getId();
 							Double amount = Double.parseDouble(amountStr);
 							Double oldAmount = count.getBalance();
 							count.setBalance(oldAmount + amount);
@@ -269,11 +268,11 @@ public class MyCashServlet extends HttpServlet{
 							format.applyPattern("yyyy-MM-dd"); 
 							Date date = format.parse(dateStr);
 							income.setAnnotation(annotation);
-							income.setIncomeCatId(categoryId);
+							income.setIncomeCategory(incomeCategory);
 							income.setAmount(amount);
-							income.setCountId(countId);
+							income.setCount(count);
 							income.setIncDate(date);
-							income.setUserId(userId);
+							income.setUser(loginedUser);
 							incomeDao.insert(income);
 							resp.sendRedirect(req.getContextPath() + "/?action=get_incomes");
 						}else {
@@ -321,9 +320,8 @@ public class MyCashServlet extends HttpServlet{
 				if(matcher.matchName(countName)) {
 					if(matcher.matchAmount(amountStr)) {
 						if(matcher.matchDate(dateStr)) {
-							int categoryId = expenseCategoryDao.getByName(userId, category).getId();
+							ExpenseCategory expenseCat = expenseCategoryDao.getByName(userId, category);
 							Count count = countDao.getByName(countName, userId);
-							int countId = count.getId();
 							Double amount = Double.parseDouble(amountStr);
 							Double oldAmount = count.getBalance();
 							count.setBalance(oldAmount - amount);
@@ -332,11 +330,11 @@ public class MyCashServlet extends HttpServlet{
 							format.applyPattern("yyyy-MM-dd"); 
 							Date date = format.parse(dateStr);
 							expense.setAnnotation(annotation);
-							expense.setExpenseCatId(categoryId);
+							expense.setExpenseCategory(expenseCat);
 							expense.setAmount(amount);
-							expense.setCountId(countId);
+							expense.setCount(count);
 							expense.setExpenseDate(date);
-							expense.setUserId(userId);
+							expense.setUser(loginedUser);
 							expenseDao.insert(expense);
 							resp.sendRedirect(req.getContextPath() + "/?action=get_expenses");
 						}else {
@@ -416,7 +414,6 @@ public class MyCashServlet extends HttpServlet{
 		MySqlCountDao countDao = (MySqlCountDao)req.getSession().getAttribute("count_dao");
 		Count count = new Count();
 		User loginedUser = (User)req.getSession().getAttribute("loginedUser");
-		int userId = loginedUser.getId();
 		String countName = req.getParameter("count_name");
 		String balance = req.getParameter("balance");
 		String currency = req.getParameter("currency");
@@ -426,7 +423,7 @@ public class MyCashServlet extends HttpServlet{
 					count.setCountName(countName);
 					count.setBalance(Double.parseDouble(balance));
 					count.setCurrency(currency);
-					count.setUserId(userId);
+					count.setUser(loginedUser);
 					countDao.insert(count);
 					resp.sendRedirect(req.getContextPath()  + "/?action=get_counts");
 				}else {

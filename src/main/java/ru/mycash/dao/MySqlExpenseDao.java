@@ -4,301 +4,219 @@ import java.sql.*;
 import java.io.*;
 import java.util.*;
 
+import javax.persistence.RollbackException;
+
+import org.hibernate.HibernateException;
+import org.hibernate.Session;
+import org.hibernate.Transaction;
+import org.hibernate.query.Query;
+
 import ru.mycash.domain.Expense;
+import ru.mycash.domain.Income;
+import ru.mycash.util.HibernateUtil;
 
 import java.text.*;
 
 public class MySqlExpenseDao{
 	
-	private Connection connection;
-	private static final String queryForInsert = "insert into mycash_db.expenses "
-			+ "(amount, annotation, exp_date, is_active, expense_category_id, count_id, user_id) "
-			+ "values (?, ?, ?, true, ?, ?, ?)";
-	private static final String queryForRead = "select id, amount, annotation, exp_date, is_active,"  
-			+ " expense_category_id, count_id, user_id from mycash_db.expenses where id = ?";
-	private static final String queryForUpdate = "update mycash_db.expenses set"
-			+ " amount = ?, annotation = ?, exp_date = ?, is_active = ?, expense_category_id = ?,"
-			+ " count_id = ?, user_id = ? where id = ?";
-	private static final String queryForGetAll = "select id, amount, annotation, exp_date, is_active,"
-			+ " expense_category_id, count_id, user_id from mycash_db.expenses where user_id = ? ";
-	private final String queryForDeactivate  = "update mycash_db.expenses set is_active = false where id = ?";
-	private PreparedStatement statementForInsert;
-	private PreparedStatement statementForRead;
-	private PreparedStatement statementForUpdate;
-	private PreparedStatement statementForGetAll;
-	private PreparedStatement statementForGetAllActive;
-	private PreparedStatement stmtForGetAllForPeriod;
-	private PreparedStatement stmtForDeactivate;
-	
-	public MySqlExpenseDao() throws DaoException{
-		try(InputStream input = MySqlExpenseDao.class.getClassLoader().getResourceAsStream("/mycash_db.properties")){
-			Properties properties = new Properties();
-			properties.load(input);
-			String url = properties.getProperty("url");
-			String username = properties.getProperty("user");
-			String password = properties.getProperty("password");
-			connection = DriverManager.getConnection(url, username, password);
-			statementForInsert = connection.prepareStatement(queryForInsert, Statement.RETURN_GENERATED_KEYS);
-			statementForRead = connection.prepareStatement(queryForRead);
-			statementForUpdate = connection.prepareStatement(queryForUpdate);
-			statementForGetAll = connection.prepareStatement(queryForGetAll);
-			statementForGetAllActive = connection.prepareStatement(queryForGetAll + "and is_active = true");
-			stmtForGetAllForPeriod = connection.prepareStatement(queryForGetAll + "and exp_date between ? and ?");
-			stmtForDeactivate = connection.prepareStatement(queryForDeactivate);
-		}
-		catch(SQLException | IOException | NullPointerException e){
-			throw new DaoException("Failed to create MySqlExpenseDao object", e);
-		}
-	}
+	private static final String queryForRead = "from Expense where id =:id";
+	private static final String queryForGetAll = "from Expense where user_id =:user_id";
+	private static final String queryForGetAllActive = "from Expense where user_id =:user_id and is_active = true";
+	private static final String queryForGetallForPeriod  = "from Expense where exp_date between :start_date and :end_date and user_id =:user_id";
 	
 	public void insert (Expense expense) throws DaoException{
-		ResultSet rSet = null;
+		Session session = null;
+		Transaction transaction = null;
 		try {
-			java.sql.Date sqlDate = new java.sql.Date(expense.getExpenseDate().getTime());
-			statementForInsert.setDouble(1, expense.getAmount());
-			statementForInsert.setString(2, expense.getAnnotation());
-			statementForInsert.setDate(3, sqlDate);
-			statementForInsert.setInt(4, expense.getExpenseCatId());
-			statementForInsert.setInt(5, expense.getCountId());
-			statementForInsert.setInt(6, expense.getUserId());
-			statementForInsert.executeUpdate();
-			rSet = statementForInsert.getGeneratedKeys();
-			Integer recordId = null;
-			if (rSet.next()) {
-				recordId = rSet.getInt(1);
-				expense.setId(recordId);
-			}
+			session = HibernateUtil.getSessionFactory().openSession();
+			transaction = session.beginTransaction();
+			session.save(expense);
+			transaction.commit();
 		}
-		catch (SQLException e){
+		catch (HibernateException | RollbackException | IllegalStateException  e){
+			if(transaction != null) {
+				transaction.rollback();
+			}
 			throw new DaoException("Failed to insert expense", e);
 		}
 		finally{
-			closeResultSet(rSet);
+			closeSession(session);
 		}
 	}
 	
 	public Expense read(int id) throws DaoException{
-		ResultSet rSet = null;
+		Session session = null;
+		Transaction transaction = null;
+		Expense expense = null;
 		try{
-			statementForRead.setInt(1, id);
-			rSet = statementForRead.executeQuery();
-			if(rSet.next()) {
-				Expense expense = new Expense();
-				expense.setId(rSet.getInt("id"));
-				expense.setAmount(rSet.getDouble("amount"));
-				expense.setAnnotation(rSet.getString("annotation"));
-				expense.setExpenseDate(rSet.getDate("exp_date"));
-				expense.setIsActive(rSet.getBoolean("is_active"));
-				expense.setExpenseCatId(rSet.getInt("expense_category_id"));
-				expense.setCountId(rSet.getInt("count_id"));
-				expense.setUserId(rSet.getInt("user_id"));
-				return expense;
-			} else {
-				return null;
-			}
-
+			session = HibernateUtil.getSessionFactory().openSession();
+			transaction = session.beginTransaction();
+			Query <Expense> query= session.createQuery(queryForRead, Expense.class);
+			query.setParameter("id", id);
+			expense = (Expense) query.uniqueResult();
+			transaction.commit();
+			return expense;
 		}
-		catch (SQLException e){
+		catch (HibernateException | RollbackException | IllegalStateException  e){
+			if(transaction != null) {
+				transaction.rollback();
+			}
 			throw new DaoException("Failed to read expense", e);
 		}
 		finally{
-			closeResultSet(rSet);
+			closeSession(session);
 		}
 	}
 	
 	public void update(Expense expense) throws DaoException{
+		Session session = null;
+		Transaction transaction = null;
 		try{
-			java.sql.Date sqlDate = new java.sql.Date(expense.getExpenseDate().getTime());
-			statementForUpdate.setDouble(1, expense.getAmount());
-			statementForUpdate.setString(2, expense.getAnnotation());
-			statementForUpdate.setDate(3, sqlDate);
-			statementForUpdate.setBoolean(4, expense.getIsActive());
-			statementForUpdate.setInt(5, expense.getExpenseCatId());
-			statementForUpdate.setInt(6, expense.getCountId());
-			statementForUpdate.setInt(7, expense.getUserId());
-			statementForUpdate.setInt(8, expense.getId());
-			statementForUpdate.executeUpdate();
+			session = HibernateUtil.getSessionFactory().openSession();
+			transaction = session.beginTransaction();
+			session.update(expense);
+			transaction.commit();
 		}
-		catch (SQLException | NullPointerException e){
-			throw new DaoException("Failed to update expense ", e);
+		catch (HibernateException | RollbackException | IllegalStateException  e){
+			if(transaction != null) {
+				transaction.rollback();
+			}
+			throw new DaoException("Failed to update expense", e);
+		}
+		finally{
+			closeSession(session);
+		}
+	}
+	
+	public void delete(int expenseId) throws DaoException{
+		Session session = null;
+		Transaction transaction = null;
+		try {
+			session = HibernateUtil.getSessionFactory().openSession();
+			transaction = session.beginTransaction();
+			Query <Expense> query= session.createQuery(queryForRead, Expense.class);
+			query.setParameter("id", expenseId);
+			Expense expense = (Expense) query.uniqueResult();
+			session.delete(expense);
+			transaction.commit();
+		}
+		catch (HibernateException | RollbackException | IllegalStateException  e){
+			if(transaction != null) {
+				transaction.rollback();
+			}
+			throw new DaoException("Failed to delete expense", e);
+		}
+		finally{
+			closeSession(session);
 		}
 	}
 	
 	public ArrayList<Expense> getAll(int userId) throws DaoException{
-		ResultSet rSet = null;
+		Session session = null;
+		Transaction transaction = null;
+		ArrayList<Expense> result = null;
 		try{
-			ArrayList<Expense> result = new ArrayList<>();
-			statementForGetAll.setInt(1, userId);
-			rSet = statementForGetAll.executeQuery();
-			while (rSet.next()){
-				Expense expense = new Expense();
-				expense.setId(rSet.getInt("id"));
-				expense.setAmount(rSet.getDouble("amount"));
-				expense.setAnnotation(rSet.getString("annotation"));
-				expense.setExpenseDate(rSet.getDate("exp_date"));
-				expense.setIsActive(rSet.getBoolean("is_active"));
-				expense.setExpenseCatId(rSet.getInt("expense_category_id"));
-				expense.setCountId(rSet.getInt("count_id"));
-				expense.setUserId(rSet.getInt("user_id"));
-				result.add(expense);
-			}
+			session = HibernateUtil.getSessionFactory().openSession();
+			transaction = session.beginTransaction();
+			Query <Expense> query= session.createQuery(queryForGetAll, Expense.class);
+			query.setParameter("user_id", userId);
+			result = (ArrayList)query.list();
 			return result;
 		}
-		catch (SQLException e){
+		catch (HibernateException | RollbackException | IllegalStateException  e){
+			if(transaction != null) {
+				transaction.rollback();
+			}
 			throw new DaoException("Failed to get all expenses", e);
 		}
 		finally{
-			closeResultSet(rSet);
+			closeSession(session);
 		}
 	}
 	
 	public ArrayList<Expense> getAllActive(int userId) throws DaoException{
-		ResultSet rSet = null;
+		Session session = null;
+		Transaction transaction = null;
+		ArrayList<Expense> result = null;
 		try{
-			ArrayList<Expense> result = new ArrayList<>();
-			statementForGetAllActive.setInt(1, userId);
-			rSet = statementForGetAllActive.executeQuery();
-			while (rSet.next()){
-				Expense expense = new Expense();
-				expense.setId(rSet.getInt("id"));
-				expense.setAmount(rSet.getDouble("amount"));
-				expense.setAnnotation(rSet.getString("annotation"));
-				expense.setExpenseDate(rSet.getDate("exp_date"));
-				expense.setIsActive(rSet.getBoolean("is_active"));
-				expense.setExpenseCatId(rSet.getInt("expense_category_id"));
-				expense.setCountId(rSet.getInt("count_id"));
-				expense.setUserId(rSet.getInt("user_id"));
-				result.add(expense);
-			}
+			session = HibernateUtil.getSessionFactory().openSession();
+			transaction = session.beginTransaction();
+			Query <Expense> query= session.createQuery(queryForGetAllActive, Expense.class);
+			query.setParameter("user_id", userId);
+			result = (ArrayList)query.list();
 			return result;
 		}
-		catch (SQLException e){
+		catch (HibernateException | RollbackException | IllegalStateException  e){
+			if(transaction != null) {
+				transaction.rollback();
+			}
 			throw new DaoException("Failed to get all active expenses", e);
 		}
 		finally{
-			closeResultSet(rSet);
+			closeSession(session);
 		}
 	}
 	
 	public ArrayList<Expense> getAllForPeriod(String startDate, 
 			String endDate, int userId) throws DaoException{
-		ResultSet rSet = null;
+		Session session = null;
+		Transaction transaction = null;
+		ArrayList<Expense> result = null;
 		try{
-			ArrayList<Expense> result = new ArrayList<>();
-			stmtForGetAllForPeriod.setInt(1, userId);
-			stmtForGetAllForPeriod.setString(2, startDate);
-			stmtForGetAllForPeriod.setString(3, endDate);
-			rSet = stmtForGetAllForPeriod.executeQuery();
-			while (rSet.next()){
-				Expense expense = new Expense();
-				expense.setId(rSet.getInt("id"));
-				expense.setAmount(rSet.getDouble("amount"));
-				expense.setAnnotation(rSet.getString("annotation"));
-				expense.setExpenseDate(rSet.getDate("exp_date"));
-				expense.setIsActive(rSet.getBoolean("is_active"));
-				expense.setExpenseCatId(rSet.getInt("expense_category_id"));
-				expense.setCountId(rSet.getInt("count_id"));
-				expense.setUserId(rSet.getInt("user_id"));
-				result.add(expense);
-			}
+			session = HibernateUtil.getSessionFactory().openSession();
+			transaction = session.beginTransaction();
+			Query <Expense> query= session.createQuery(queryForGetallForPeriod, Expense.class);
+			query.setParameter("start_date", startDate);
+			query.setParameter("end_date", endDate);
+			query.setParameter("user_id", userId);
+			result = (ArrayList)query.list();
 			return result;
 		}
-		catch (SQLException e){
+		catch (HibernateException | RollbackException | IllegalStateException  e){
+			if(transaction != null) {
+				transaction.rollback();
+			}
 			throw new DaoException("Failed to get expenses for period", e);
 		}
 		finally{
-			closeResultSet(rSet);
+			closeSession(session);
 		}
 	}
 	
 	public void deactivate(int expenseId) throws DaoException{
+		Session session = null;
+		Transaction transaction = null;
 		try {
-			stmtForDeactivate.setInt(1, expenseId);
-			stmtForDeactivate.executeUpdate();
+			session = HibernateUtil.getSessionFactory().openSession();
+			transaction = session.beginTransaction();
+			Query <Expense> query= session.createQuery(queryForRead, Expense.class);
+			query.setParameter("id", expenseId);
+			Expense expense = (Expense) query.uniqueResult();
+			if(expense == null) {
+				throw new DaoException("Expense doesn't exist");
+			}
+			expense.setIsActive(false);
+			session.update(expense);
+			transaction.commit();
 		} 
-		catch(SQLException e) {
-			throw new DaoException("Failed to deactivate income", e);
+		catch (HibernateException | RollbackException | IllegalStateException  e){
+			if(transaction != null) {
+				transaction.rollback();
+			}
+			throw new DaoException("Failed to deactivate expense", e);
 		}
-		
+		finally{
+			closeSession(session);
+		}
 	}
 	
-	public void close() throws DaoException{
-		DaoException exception = new DaoException("MySqlExpenseDao has been closed with exception(s)");
-		if(statementForInsert != null){
+	private void closeSession(Session session) throws DaoException{
+		if (session != null){
 			try{
-				statementForInsert.close();
+				session.close();
 			}
-			catch(SQLException e){
-				exception.addSuppressed(e);
-			}
-		}
-		
-		if(statementForUpdate != null){
-			try{
-				statementForUpdate.close();
-			}
-			catch(SQLException e){
-				exception.addSuppressed(e);
-			}
-		}
-		
-		if(statementForRead != null){
-			try{
-				statementForRead.close();
-			}
-			catch(SQLException e){
-				exception.addSuppressed(e);
-			}
-		}
-		
-		if(statementForGetAll != null){
-			try{
-				statementForGetAll.close();
-			}
-			catch(SQLException e){
-				exception.addSuppressed(e);
-			}
-		}
-		
-		if(statementForGetAllActive != null){
-			try{
-				statementForGetAllActive.close();
-			}
-			catch(SQLException e){
-				exception.addSuppressed(e);
-			}
-		}
-		
-		if(stmtForGetAllForPeriod != null){
-			try{
-				stmtForGetAllForPeriod.close();
-			}
-			catch(SQLException e){
-				exception.addSuppressed(e);
-			}
-		}
-		
-		if(connection != null){
-			try{
-				connection.close();
-			}
-			catch(SQLException e){
-				exception.addSuppressed(e);
-			}
-		}
-		Throwable[] suppressed = exception.getSuppressed();
-		if(suppressed.length > 0){
-			throw exception;
-		} 
-	}
-	
-	private void closeResultSet(ResultSet rSet) throws DaoException{
-		if (rSet != null){
-			try{
-				rSet.close();
-			}
-			catch (SQLException e){
-				throw new DaoException("Unable to close ResultSet", e);
+			catch (HibernateException e){
+				throw new DaoException("Unable to close Session", e);
 			}
 		}
 	}

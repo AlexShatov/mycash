@@ -1,297 +1,213 @@
 package ru.mycash.dao;
 
-import java.sql.*;
-import java.io.*;
-import java.util.*;
 
+import java.util.*;
+import javax.persistence.RollbackException;
+import org.hibernate.HibernateException;
+import org.hibernate.Session;
+import org.hibernate.Transaction;
+import org.hibernate.query.Query;
 import ru.mycash.domain.IncomeCategory;
+import ru.mycash.util.HibernateUtil;
 
 public class MySqlIncomeCategoryDao{
-	private Connection connection;
-	private static final String queryForInsert = "insert into income_categories (category_name, is_active, user_id)" 
-			+ " values (?, true, ?)";
-	private static final String queryForUpdate = "update income_categories set " +
-			"category_name = ?, is_active = ?, user_id = ? where id = ?";
-	private static final String queryForRead = "select id, category_name, is_active, user_id from income_categories" 
-			+ " where id = ?";
-	private static final String queryForGetAll = "select id, category_name, is_active, user_id from income_categories" 
-			+ " where user_id = ?";
-	private static final String queryForGetAllActive = "select id, category_name, is_active, user_id from" 
-			+ " income_categories where user_id = ? and is_active = true";
-	private static final String queryForDelete = "delete from income_categories where id = ?";
-	private static final String queryForDeactivate = "update income_categories set " +
-			"is_active = false where id = ?";
-
-	private PreparedStatement statementForInsert;
-	private PreparedStatement statementForRead;
-	private PreparedStatement statementForUpdate;
-	private PreparedStatement statementForGetAll;
-	private PreparedStatement statementForGetAllActive;
-	private PreparedStatement statementForGetByName;
-	private PreparedStatement statementForDelete;
-	private PreparedStatement statementForDeactivate;
 	
-	
-	public MySqlIncomeCategoryDao() throws DaoException{
-		try(InputStream input = MySqlIncomeCategoryDao.class.getClassLoader().getResourceAsStream("mycash_db.properties")){
-			Properties properties = new Properties();
-			properties.load(input);
-			String url = properties.getProperty("url");
-			String username = properties.getProperty("user");
-			String password = properties.getProperty("password");
-			connection = DriverManager.getConnection(url, username, password);
-			statementForInsert = connection.prepareStatement(queryForInsert, Statement.RETURN_GENERATED_KEYS);
-			statementForRead = connection.prepareStatement(queryForRead);
-			statementForUpdate = connection.prepareStatement(queryForUpdate);
-			statementForGetAll = connection.prepareStatement(queryForGetAll);
-			statementForGetAllActive = connection.prepareStatement(queryForGetAllActive);
-			statementForGetByName = connection.prepareStatement(queryForGetAllActive + " and category_name = ?");
-			statementForDelete = connection.prepareStatement(queryForDelete);
-			statementForDeactivate = connection.prepareStatement(queryForDeactivate);
-		}
-		catch(SQLException | IOException | NullPointerException e){
-			throw new DaoException("Failed to create MySqlIncomeCategoryDao object", e);
-		}
-	}
+	private static final String queryForRead = "from IncomeCategory where id =:id";	
+	private static final String queryForGetAll = "from IncomeCategory where user_id =:user_id";
+	private static final String queryForGetAllActive = "from IncomeCategory where user_id =:user_id and is_active = true";
+	private static final String queryForGetByName = "from IncomeCategory where category_name=:category_name and user_id =:user_id";
 	
 	public void insert (IncomeCategory incomeCat) throws DaoException{
-		ResultSet rSet = null;
+		Session session = null;
+		Transaction transaction = null;
 		try {
-			statementForInsert.setString(1, incomeCat.getCategoryName());
-			statementForInsert.setInt(2, incomeCat.getUserId());
-			statementForInsert.executeUpdate();
-			rSet = statementForInsert.getGeneratedKeys();
-			Integer recordId = null;
-			if (rSet.next()) {
-				recordId = rSet.getInt(1);
-				incomeCat.setId(recordId);
-			}
+			session = HibernateUtil.getSessionFactory().openSession();
+			transaction = session.beginTransaction();
+			session.save(incomeCat);
+			transaction.commit();
 		}
-		catch (SQLException e){
+		catch (HibernateException | RollbackException | IllegalStateException  e){
+			if(transaction != null) {
+				transaction.rollback();
+			}
 			throw new DaoException("Failed to insert income category", e);
 		}
 		finally{
-			closeResultSet(rSet);
+			closeSession(session);
 		}
 	}
 	
 	public IncomeCategory read(int id) throws DaoException{
-		ResultSet rSet = null;
+		Session session = null;
+		Transaction transaction = null;
+		IncomeCategory incomeCat = null;
 		try{
-			statementForRead.setInt(1, id);
-			rSet = statementForRead.executeQuery();
-			if(rSet.next()) {
-				IncomeCategory incomeCat = new IncomeCategory();
-				incomeCat.setId(rSet.getInt("id"));
-				incomeCat.setCategoryName(rSet.getString("category_name"));
-				incomeCat.setIsActive(rSet.getBoolean("is_active"));
-				incomeCat.setUserId(rSet.getInt("user_id"));
-				return incomeCat;
-			} else {
-				return null;
-			}
-
+			session = HibernateUtil.getSessionFactory().openSession();
+			transaction = session.beginTransaction();
+			Query <IncomeCategory> query= session.createQuery(queryForRead, IncomeCategory.class);
+			query.setParameter("id", id);
+			incomeCat = (IncomeCategory) query.uniqueResult();
+			transaction.commit();
+			return incomeCat;
 		}
-		catch (SQLException e){
+		catch (HibernateException | RollbackException | IllegalStateException  e){
+			if(transaction != null) {
+				transaction.rollback();
+			}
 			throw new DaoException("Failed to read income category", e);
 		}
 		finally{
-			closeResultSet(rSet);
+			closeSession(session);
 		}
 	}
 	
 	public void update(IncomeCategory incomeCat) throws DaoException{
+		Session session = null;
+		Transaction transaction = null;
 		try{
-			statementForUpdate.setString(1, incomeCat.getCategoryName());
-			statementForUpdate.setBoolean(2, incomeCat.getIsActive());
-			statementForUpdate.setInt(3, incomeCat.getUserId());
-			statementForUpdate.setInt(4, incomeCat.getId());
-			statementForUpdate.executeUpdate();
+			session = HibernateUtil.getSessionFactory().openSession();
+			transaction = session.beginTransaction();
+			session.update(incomeCat);
+			transaction.commit();
 		}
-		catch (SQLException | NullPointerException e){
+		catch (HibernateException | RollbackException | IllegalStateException  e){
+			if(transaction != null) {
+				transaction.rollback();
+			}
 			throw new DaoException("Failed to update income category", e);
+		}
+		finally{
+			closeSession(session);
+		}
+	}
+	
+	public void delete(int incomeCatId) throws DaoException{
+		Session session = null;
+		Transaction transaction = null;
+		try {
+			session = HibernateUtil.getSessionFactory().openSession();
+			transaction = session.beginTransaction();
+			Query <IncomeCategory> query= session.createQuery(queryForRead, IncomeCategory.class);
+			query.setParameter("id", incomeCatId);
+			IncomeCategory incomeCat = (IncomeCategory) query.uniqueResult();
+			session.delete(incomeCat);
+			transaction.commit();
+		}
+		catch (HibernateException | RollbackException | IllegalStateException  e){
+			if(transaction != null) {
+				transaction.rollback();
+			}
+			throw new DaoException("Failed to delete income category", e);
+		}
+		finally{
+			closeSession(session);
 		}
 	}
 	
 	public ArrayList<IncomeCategory> getAll(int userId) throws DaoException{
-		ResultSet rSet = null;
+		Session session = null;
+		Transaction transaction = null;
+		ArrayList<IncomeCategory> result = null;
 		try{
-			ArrayList<IncomeCategory> result = new ArrayList<>();
-			statementForGetAll.setInt(1, userId);
-			rSet = statementForGetAll.executeQuery();
-			while (rSet.next()){
-				IncomeCategory incomeCat = new IncomeCategory();
-				incomeCat.setId(rSet.getInt("id"));
-				incomeCat.setCategoryName(rSet.getString("category_name"));
-				incomeCat.setIsActive(rSet.getBoolean("is_active"));
-				incomeCat.setUserId(rSet.getInt("user_id"));
-				result.add(incomeCat);
-			}
+			session = HibernateUtil.getSessionFactory().openSession();
+			transaction = session.beginTransaction();
+			Query <IncomeCategory> query= session.createQuery(queryForGetAll, IncomeCategory.class);
+			query.setParameter("user_id", userId);
+			result = (ArrayList)query.list();
 			return result;
 		}
-		catch (SQLException e){
+		catch (HibernateException | RollbackException | IllegalStateException  e){
+			if(transaction != null) {
+				transaction.rollback();
+			}
 			throw new DaoException("Failed to get all income categories", e);
 		}
 		finally{
-			closeResultSet(rSet);
+			closeSession(session);
 		}
 	}
 	
 	public ArrayList<IncomeCategory> getAllActive(int userId) throws DaoException{
-		ResultSet rSet = null;
+		Session session = null;
+		Transaction transaction = null;
+		ArrayList<IncomeCategory> result = null;
 		try{
-			ArrayList<IncomeCategory> result = new ArrayList<>();
-			statementForGetAllActive.setInt(1, userId);
-			rSet = statementForGetAllActive.executeQuery();
-			while (rSet.next()){
-				IncomeCategory incomeCat = new IncomeCategory();
-				incomeCat.setId(rSet.getInt("id"));
-				incomeCat.setCategoryName(rSet.getString("category_name"));
-				incomeCat.setIsActive(rSet.getBoolean("is_active"));
-				incomeCat.setUserId(rSet.getInt("user_id"));
-				result.add(incomeCat);
-			}
+			session = HibernateUtil.getSessionFactory().openSession();
+			transaction = session.beginTransaction();
+			Query <IncomeCategory> query= session.createQuery(queryForGetAllActive, IncomeCategory.class);
+			query.setParameter("user_id", userId);
+			result = (ArrayList)query.list();
 			return result;
 		}
-		catch (SQLException e){
+		catch (HibernateException | RollbackException | IllegalStateException  e){
+			if(transaction != null) {
+				transaction.rollback();
+			}
 			throw new DaoException("Failed to get all active income categories", e);
 		}
 		finally{
-			closeResultSet(rSet);
+			closeSession(session);
 		}
 	}
 	
 	public IncomeCategory getByName(int userId, String categoryName) throws DaoException{
-		ResultSet rSet = null;
+		Session session = null;
+		Transaction transaction = null;
+		IncomeCategory incomeCat = null;
 		try{
-			statementForGetByName.setInt(1, userId);
-			statementForGetByName.setString(2, categoryName);
-			rSet = statementForGetByName.executeQuery();
-			IncomeCategory incomeCat = null;
-			if(rSet.next()) {
-				incomeCat = new IncomeCategory();
-				incomeCat.setId(rSet.getInt("id"));
-				incomeCat.setCategoryName(rSet.getString("category_name"));
-				incomeCat.setIsActive(rSet.getBoolean("is_active"));
-				incomeCat.setUserId(rSet.getInt("user_id"));
-			} 
+			session = HibernateUtil.getSessionFactory().openSession();
+			transaction = session.beginTransaction();
+			Query <IncomeCategory> query= session.createQuery(queryForGetByName, IncomeCategory.class);
+			query.setParameter("category_name", categoryName);
+			query.setParameter("user_id", userId);
+			incomeCat = (IncomeCategory) query.uniqueResult();
 			return incomeCat;
 		}
-		catch (SQLException e){
-			throw new DaoException("Failed to read income category", e);
+		catch (HibernateException | RollbackException | IllegalStateException  e){
+			if(transaction != null) {
+				transaction.rollback();
+			}
+			throw new DaoException("Failed to get income category by name", e);
 		}
 		finally{
-			closeResultSet(rSet);
+			closeSession(session);
 		}
 	}
 	
 	public void deactivate(int incomeCatId) throws DaoException{
+		Session session = null;
+		Transaction transaction = null;
 		try {
-			statementForDeactivate.setInt(1, incomeCatId);
-			statementForDeactivate.executeUpdate();
+			session = HibernateUtil.getSessionFactory().openSession();
+			transaction = session.beginTransaction();
+			Query <IncomeCategory> query= session.createQuery(queryForRead, IncomeCategory.class);
+			query.setParameter("id", incomeCatId);
+			IncomeCategory incomeCat = (IncomeCategory) query.uniqueResult();
+			if(incomeCat == null) {
+				throw new DaoException("Income category doesn't exist");
+			}
+			incomeCat.setIsActive(false);
+			session.update(incomeCat);
+			transaction.commit();
 		} 
-		catch(SQLException e) {
+		catch (HibernateException | RollbackException | IllegalStateException  e){
+			if(transaction != null) {
+				transaction.rollback();
+			}
 			throw new DaoException("Failed to deactivate income category", e);
 		}
-		
-	}
-	
-	public void delete(int id) throws DaoException{
-		try {
-			statementForDelete.setInt(1, id);
-			statementForDelete.executeUpdate();
-		}catch(SQLException e){
-			throw new DaoException("Failed to delete income category", e);
+		finally{
+			closeSession(session);
 		}
 	}
-	
-	public void close() throws DaoException{
-		DaoException exception = new DaoException("MySqlIncomeCategoryDao closed with exception(s)");
-		if(statementForInsert != null){
+
+	private void closeSession(Session session) throws DaoException{
+		if (session != null){
 			try{
-				statementForInsert.close();
+				session.close();
 			}
-			catch(SQLException e){
-				exception.addSuppressed(e);
-			}
-		}
-		
-		if(statementForUpdate != null){
-			try{
-				statementForUpdate.close();
-			}
-			catch(SQLException e){
-				exception.addSuppressed(e);
-			}
-		}
-		
-		if(statementForRead != null){
-			try{
-				statementForRead.close();
-			}
-			catch(SQLException e){
-				exception.addSuppressed(e);
-			}
-		}
-		
-		if(statementForGetAll != null){
-			try{
-				statementForGetAll.close();
-			}
-			catch(SQLException e){
-				exception.addSuppressed(e);
-			}
-		}
-		
-		if(statementForGetAllActive != null){
-			try{
-				statementForGetAllActive.close();
-			}
-			catch(SQLException e){
-				exception.addSuppressed(e);
-			}
-		}
-		
-		if(statementForGetByName != null){
-			try{
-				statementForGetByName.close();
-			}
-			catch(SQLException e){
-				exception.addSuppressed(e);
-			}
-		}
-		
-		if(connection != null){
-			try{
-				connection.close();
-			}
-			catch(SQLException e){
-				exception.addSuppressed(e);
-			}
-		}
-		
-		if(statementForDelete != null){
-			try{
-				statementForDelete.close();
-			}
-			catch(SQLException e){
-				exception.addSuppressed(e);
-			}
-		}
-		
-		Throwable[] suppressed = exception.getSuppressed();
-		if(suppressed.length > 0){
-			throw exception;
-		} 
-	}
-	
-	private void closeResultSet(ResultSet rSet) throws DaoException{
-		if (rSet != null){
-			try{
-				rSet.close();
-			}
-			catch (SQLException e){
-				throw new DaoException("Unable to close ResultSet", e);
+			catch (HibernateException e){
+				throw new DaoException("Unable to close Session", e);
 			}
 		}
 	}
