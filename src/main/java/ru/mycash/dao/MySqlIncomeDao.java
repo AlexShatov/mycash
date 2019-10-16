@@ -12,7 +12,7 @@ import org.hibernate.query.Query;
 import ru.mycash.domain.Income;
 import ru.mycash.util.HibernateUtil;
 
-public class MySqlIncomeDao {
+public class MySqlIncomeDao extends MycashDao{
 
 	private static final String queryForRead = "from Income where id =:id";
 	private static final String queryForGetAll = "from Income where user_id =:user_id";
@@ -203,17 +203,6 @@ public class MySqlIncomeDao {
 		}
 		finally{
 			closeSession(session);
-		}
-	}
-	
-	private void closeSession(Session session) throws DaoException{
-		if (session != null){
-			try{
-				session.close();
-			}
-			catch (HibernateException e){
-				throw new DaoException("Unable to close Session", e);
-			}
 		}
 	}
 }

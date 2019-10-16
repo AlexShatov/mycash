@@ -4,17 +4,6 @@ import ru.mycash.dao.*;
 
 public class MySqlDaoFactory {
 
-    private static final String driver = "com.mysql.cj.jdbc.Driver";
-
-    public MySqlDaoFactory() throws DaoException{
-        try {
-            Class.forName(driver).getDeclaredConstructor().newInstance();
-        }
-        catch(Exception e){
-            throw new DaoException("Failed to create DAOfactory",e);
-        }
-    }
-
     public MySqlUserDao getMySqlUserDao() {
             return new MySqlUserDao();
     }

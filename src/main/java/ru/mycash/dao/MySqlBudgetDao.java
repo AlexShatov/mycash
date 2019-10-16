@@ -13,7 +13,7 @@ import ru.mycash.domain.BudgetEntry;
 
 import ru.mycash.util.HibernateUtil;
 
-public class MySqlBudgetDao {
+public class MySqlBudgetDao extends MycashDao{
 
 	private static final String queryForRead = "from BudgetEntry where id =:id";
 	private static final String queryForGetAll = "from BudgetEntry where user_id =:user_id";
@@ -127,15 +127,5 @@ public class MySqlBudgetDao {
 			closeSession(session);
 		}
 	}
-	
-	private void closeSession(Session session) throws DaoException{
-		if (session != null){
-			try{
-				session.close();
-			}
-			catch (HibernateException e){
-				throw new DaoException("Unable to close Session", e);
-			}
-		}
-	}
+
 }

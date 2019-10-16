@@ -10,7 +10,7 @@ import org.hibernate.query.Query;
 import ru.mycash.domain.IncomeCategory;
 import ru.mycash.util.HibernateUtil;
 
-public class MySqlIncomeCategoryDao{
+public class MySqlIncomeCategoryDao extends MycashDao{
 	
 	private static final String queryForRead = "from IncomeCategory where id =:id";	
 	private static final String queryForGetAll = "from IncomeCategory where user_id =:user_id";
@@ -198,17 +198,6 @@ public class MySqlIncomeCategoryDao{
 		}
 		finally{
 			closeSession(session);
-		}
-	}
-
-	private void closeSession(Session session) throws DaoException{
-		if (session != null){
-			try{
-				session.close();
-			}
-			catch (HibernateException e){
-				throw new DaoException("Unable to close Session", e);
-			}
 		}
 	}
 }

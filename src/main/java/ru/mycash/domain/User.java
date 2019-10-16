@@ -38,6 +38,9 @@ public class User {
 	@OneToMany(cascade = CascadeType.ALL, mappedBy = "user")
 	private List<Income> incomes = new ArrayList<Income>();
 	
+	@OneToMany(cascade = CascadeType.ALL, mappedBy = "user")
+	private List<Expense> expenses = new ArrayList<Expense>();
+	
 	public List<Count> getCounts(){
 		return counts;
 	}
@@ -88,6 +91,19 @@ public class User {
 	public void addIncome (Income income) {
 		income.setUser(this);
 		incomes.add(income);
+	}
+	
+	public List<Expense> getExpenses(){
+		return expenses;
+	}
+	
+	public void setExpenses(List<Expense> expenses) {
+		this.expenses = expenses;
+	}
+	
+	public void addExpense (Expense expense) {
+		expense.setUser(this);
+		expenses.add(expense);
 	}
 	
 	public Integer getId() {

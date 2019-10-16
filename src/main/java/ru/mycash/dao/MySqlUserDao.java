@@ -10,7 +10,7 @@ import org.hibernate.Transaction;
 import ru.mycash.domain.User;
 import ru.mycash.util.HibernateUtil;
 
-public class MySqlUserDao{
+public class MySqlUserDao extends MycashDao{
 	
 	private static final String queryForRead = "from User where id=:id";
 	private static final String queryForGetByLogin = "from User where login=:login";
@@ -149,17 +149,6 @@ public class MySqlUserDao{
 		}
 		finally{
 			closeSession(session);
-		}
-	}
-	
-	private void closeSession(Session session) throws DaoException{
-		if (session != null){
-			try{
-				session.close();
-			}
-			catch (HibernateException e){
-				throw new DaoException("Unable to close Session", e);
-			}
 		}
 	}
 }

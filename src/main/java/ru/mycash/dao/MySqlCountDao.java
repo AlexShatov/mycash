@@ -13,7 +13,7 @@ import ru.mycash.domain.Count;
 
 import java.util.ArrayList;
 
-public class MySqlCountDao{
+public class MySqlCountDao extends MycashDao{
 	
 	private static final String queryForRead = "from Count where id =:id ";	
 	private static final String queryForGetAll = "from Count where user_id =:user_id";
@@ -201,17 +201,6 @@ public class MySqlCountDao{
 		}
 		finally{
 			closeSession(session);
-		}
-	}
-	
-	private void closeSession(Session session) throws DaoException{
-		if (session != null){
-			try{
-				session.close();
-			}
-			catch (HibernateException e){
-				throw new DaoException("Unable to close Session", e);
-			}
 		}
 	}
 }

@@ -115,9 +115,4 @@ public class MySqlUserDaoTest {
 		userDao.delete(user.getId());
 		assertNull(userDao.read(user.getId()));
 	}
-	
-	@AfterClass
-	public void closeRes() throws DaoException{
-		cleaner.close();
-	}
 }

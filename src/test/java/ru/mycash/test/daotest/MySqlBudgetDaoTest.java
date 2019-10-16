@@ -95,6 +95,7 @@ public class MySqlBudgetDaoTest {
 		budgetDao.delete(updated.getId());
 	}
 	
+	@Test
 	public void testDelete() throws DaoException, ParseException{
 		BudgetEntry entry = new BudgetEntry();
 		User user = userDao.read(1);

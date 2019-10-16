@@ -143,11 +143,6 @@ public class MySqlIncomeCategoryDaoTest {
 		incomeCatDao.delete(updated.getId());
 	}
 	
-	@AfterClass
-	public void closeRes() throws DaoException{
-		cleaner.close();
-	}
-	
 	@DataProvider
 	public Object[][] getGetAllData(){
 		return new Object[][] {{1, 1}, {2, 0}};

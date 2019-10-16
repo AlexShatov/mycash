@@ -9,7 +9,7 @@ import org.hibernate.query.Query;
 import ru.mycash.domain.ExpenseCategory;
 import ru.mycash.util.HibernateUtil;
 
-public class MySqlExpenseCategoryDao{
+public class MySqlExpenseCategoryDao extends MycashDao{
 	
 	private static final String queryForRead = "from ExpenseCategory where id =:id ";	
 	private static final String queryForGetAll = "from ExpenseCategory where user_id =:user_id";
@@ -199,16 +199,4 @@ public class MySqlExpenseCategoryDao{
 			closeSession(session);
 		}
 	}
-	
-	private void closeSession(Session session) throws DaoException{
-		if (session != null){
-			try{
-				session.close();
-			}
-			catch (HibernateException e){
-				throw new DaoException("Unable to close Session", e);
-			}
-		}
-	}
-
 }
