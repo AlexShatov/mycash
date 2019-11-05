@@ -4,23 +4,42 @@ import java.io.*;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
+
 import javax.servlet.*;
-import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.*;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+import org.springframework.web.context.support.SpringBeanAutowiringSupport;
 
 import ru.mycash.dao.*;
 import ru.mycash.domain.*;
 import ru.mycash.util.InputMatcher;
 
-
-@WebServlet("/")
+@Component
 
 public class MyCashServlet extends HttpServlet{
 	
 	private static InputMatcher matcher;
+	@Autowired
+	private MySqlIncomeDao incomeDao;
+	@Autowired
+	private MySqlUserDao userDao;
+	@Autowired
+	private MySqlExpenseDao expenseDao;
+	@Autowired
+	private MySqlExpenseCategoryDao expenseCategoryDao;
+	@Autowired
+	private MySqlIncomeCategoryDao incomeCategoryDao;
+	@Autowired
+	private MySqlCountDao countDao;
+	@Autowired
+	private MySqlBudgetDao budgetDao;
 	
 	@Override
-	public void init() {
+	public void init(ServletConfig config) throws ServletException {
+		super.init(config);
+		SpringBeanAutowiringSupport.processInjectionBasedOnServletContext(this, config.getServletContext());
 		matcher = new InputMatcher();
 	}
 	
@@ -88,11 +107,11 @@ public class MyCashServlet extends HttpServlet{
 		resp.sendRedirect(req.getContextPath() + "/");
 	}
 	
+	
 	private void authorize(HttpServletRequest req, HttpServletResponse resp) 
 			throws ServletException, IOException, DaoException{
 		String login = req.getParameter("login");
-		String pass = req.getParameter("pass");
-		MySqlUserDao userDao = (MySqlUserDao)req.getSession().getAttribute("user_dao");
+		String pass = req.getParameter("pass");	
 		User user = new User();
 		if(matcher.matchLogin(login)) {
 			user.setLogin(login);
@@ -130,7 +149,6 @@ public class MyCashServlet extends HttpServlet{
 		String login = req.getParameter("login");
 		String pass = req.getParameter("pass");
 		String email = req.getParameter("email");
-		MySqlUserDao userDao = (MySqlUserDao)req.getSession().getAttribute("user_dao");
 		User user = new User();
 		if(matcher.matchLogin(login)) {
 			user.setLogin(login);
@@ -184,7 +202,6 @@ public class MyCashServlet extends HttpServlet{
 		String newPass = req.getParameter("new_pass");
 		String repeatPass = req.getParameter("repeat_new_pass");
 		User loginedUser = (User)req.getSession().getAttribute("loginedUser");
-		MySqlUserDao userDao = (MySqlUserDao)req.getSession().getAttribute("user_dao");
 		String passFromDb = userDao.getByLogin(loginedUser.getLogin()).getPassword();
 		if(matcher.matchPassword(newPass)) {
 			if(matcher.matchPassword(repeatPass)) {
@@ -223,9 +240,6 @@ public class MyCashServlet extends HttpServlet{
 			startDate = new SimpleDateFormat("yyyy-MM-dd").format(new Date());
 			endDate = startDate;
 		}
-		MySqlCountDao countDao = (MySqlCountDao)req.getSession().getAttribute("count_dao");
-		MySqlIncomeDao incomeDao = (MySqlIncomeDao) req.getSession().getAttribute("income_dao");
-		MySqlIncomeCategoryDao incomeCategoryDao = (MySqlIncomeCategoryDao) req.getSession().getAttribute("income_cat_dao"); 
 		ArrayList<IncomeCategory> categories = incomeCategoryDao.getAllActive(userId);
 		ArrayList<Count> counts = countDao.getAllActive(userId);
 		if(matcher.matchDate(startDate) && matcher.matchDate(endDate)) {
@@ -242,9 +256,6 @@ public class MyCashServlet extends HttpServlet{
 	
 	private void addIncome(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException, 
 			DaoException, ParseException{
-		MySqlIncomeDao incomeDao = (MySqlIncomeDao) req.getSession().getAttribute("income_dao");
-		MySqlCountDao countDao = (MySqlCountDao)req.getSession().getAttribute("count_dao");
-		MySqlIncomeCategoryDao incomeCategoryDao = (MySqlIncomeCategoryDao) req.getSession().getAttribute("income_cat_dao"); 
 		Income income = new Income();
 		User loginedUser = (User)req.getSession().getAttribute("loginedUser");
 		int userId = loginedUser.getId();
@@ -297,16 +308,12 @@ public class MyCashServlet extends HttpServlet{
 	private void deleteIncome (HttpServletRequest req, HttpServletResponse resp) 
 			throws ServletException, IOException, DaoException{
 		int incomeId = Integer.parseInt(req.getParameter("income_id"));
-		MySqlIncomeDao incomeDao = (MySqlIncomeDao) req.getSession().getAttribute("income_dao");
 		incomeDao.deactivate(incomeId);
 		resp.sendRedirect(req.getContextPath()  + "/?action=get_incomes");
 	}	
 	
 	private void addExpense(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException, 
 			DaoException, ParseException{
-		MySqlExpenseDao expenseDao = (MySqlExpenseDao) req.getSession().getAttribute("expense_dao");
-		MySqlCountDao countDao = (MySqlCountDao)req.getSession().getAttribute("count_dao");
-		MySqlExpenseCategoryDao expenseCategoryDao = (MySqlExpenseCategoryDao) req.getSession().getAttribute("expense_cat_dao"); 
 		Expense expense = new Expense();
 		User loginedUser = (User)req.getSession().getAttribute("loginedUser");
 		int userId = loginedUser.getId();
@@ -358,7 +365,6 @@ public class MyCashServlet extends HttpServlet{
 	private void deleteExpense (HttpServletRequest req, HttpServletResponse resp) 
 			throws ServletException, IOException, DaoException{
 		int expenseId = Integer.parseInt(req.getParameter("expense_id"));
-		MySqlExpenseDao expenseDao = (MySqlExpenseDao) req.getSession().getAttribute("expense_dao");
 		expenseDao.deactivate(expenseId);
 		resp.sendRedirect(req.getContextPath()  + "/?action=get_expenses");
 	}
@@ -373,9 +379,6 @@ public class MyCashServlet extends HttpServlet{
 			startDate = new SimpleDateFormat("yyyy-MM-dd").format(new Date());
 			endDate = startDate;
 		}
-		MySqlCountDao countDao = (MySqlCountDao)req.getSession().getAttribute("count_dao");
-		MySqlExpenseDao expenseDao = (MySqlExpenseDao) req.getSession().getAttribute("expense_dao");
-		MySqlExpenseCategoryDao expenseCategoryDao = (MySqlExpenseCategoryDao) req.getSession().getAttribute("expense_cat_dao"); 
 		ArrayList<ExpenseCategory> categories = expenseCategoryDao.getAllActive(userId);
 		ArrayList<Count> counts = countDao.getAllActive(userId);
 		if(matcher.matchDate(startDate) && matcher.matchDate(endDate)) {
@@ -394,7 +397,6 @@ public class MyCashServlet extends HttpServlet{
 			throws ServletException, IOException, DaoException{
 		User loginedUser = (User)req.getSession().getAttribute("loginedUser");
 		int userId = loginedUser.getId(); 
-		MySqlCountDao countDao = (MySqlCountDao)req.getSession().getAttribute("count_dao");
 		ArrayList<Count> counts = countDao.getAllActive(userId);
 		req.setAttribute("counts", counts);
 		req.setAttribute("login", loginedUser.getLogin());
@@ -404,14 +406,12 @@ public class MyCashServlet extends HttpServlet{
 	private void deleteCount(HttpServletRequest req, HttpServletResponse resp) 
 			throws ServletException, IOException, DaoException{
 		int countId = Integer.parseInt(req.getParameter("count_id"));
-		MySqlCountDao countDao = (MySqlCountDao)req.getSession().getAttribute("count_dao");
 		countDao.deactivate(countId);
 		resp.sendRedirect(req.getContextPath()  + "/?action=get_counts");
 	}
 	
 	private void addCount(HttpServletRequest req, HttpServletResponse resp) 
 			throws ServletException, IOException, DaoException{
-		MySqlCountDao countDao = (MySqlCountDao)req.getSession().getAttribute("count_dao");
 		Count count = new Count();
 		User loginedUser = (User)req.getSession().getAttribute("loginedUser");
 		String countName = req.getParameter("count_name");

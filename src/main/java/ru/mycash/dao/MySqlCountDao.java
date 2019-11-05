@@ -26,6 +26,7 @@ public class MySqlCountDao extends MycashDao{
 		try {
 			session = HibernateUtil.getSessionFactory().openSession();
 			transaction = session.beginTransaction();
+			count.setIsActive(true);
 			session.save(count);
 			transaction.commit();
 		}

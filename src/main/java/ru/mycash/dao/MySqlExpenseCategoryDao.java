@@ -22,6 +22,7 @@ public class MySqlExpenseCategoryDao extends MycashDao{
 		try {
 			session = HibernateUtil.getSessionFactory().openSession();
 			transaction = session.beginTransaction();
+			expenseCat.setIsActive(true);
 			session.save(expenseCat);
 			transaction.commit();
 		}

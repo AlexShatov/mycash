@@ -23,6 +23,7 @@ public class MySqlIncomeCategoryDao extends MycashDao{
 		try {
 			session = HibernateUtil.getSessionFactory().openSession();
 			transaction = session.beginTransaction();
+			incomeCat.setIsActive(true);
 			session.save(incomeCat);
 			transaction.commit();
 		}

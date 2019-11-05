@@ -21,6 +21,7 @@ public class MySqlUserDao extends MycashDao{
 		try {
 			session = HibernateUtil.getSessionFactory().openSession();
 			transaction = session.beginTransaction();
+			user.setIsActive(true);
 	        session.save(user);
 	        transaction.commit();
 		}

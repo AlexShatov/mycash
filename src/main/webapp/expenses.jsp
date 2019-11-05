@@ -1,4 +1,4 @@
-<%@ page import="java.util.ArrayList,ru.mycash.domain.Count,ru.mycash.domain.Expense,ru.mycash.domain.ExpenseCategory,ru.mycash.dao.MySqlCountDao,ru.mycash.dao.MySqlExpenseCategoryDao" %>
+<%@ page import="java.util.ArrayList,ru.mycash.domain.Count,ru.mycash.domain.Expense,ru.mycash.domain.ExpenseCategory,ru.mycash.dao.MySqlCountDao,ru.mycash.dao.MySqlExpenseCategoryDao,org.springframework.context.ApplicationContext, org.springframework.web.servlet.support.RequestContextUtils" %>
 <!DOCTYPE html>
 <html>
   <head>
@@ -117,8 +117,9 @@
 			  <tr>
 			    <%
 			    ArrayList<Expense> expenses = (ArrayList<Expense>)request.getAttribute("expenses");
-			    MySqlCountDao countDao = (MySqlCountDao) session.getAttribute("count_dao");
-			    MySqlExpenseCategoryDao categoryDao = (MySqlExpenseCategoryDao)session.getAttribute("expense_cat_dao");
+			    ApplicationContext ac = RequestContextUtils.findWebApplicationContext(request);
+			    MySqlCountDao countDao = (MySqlCountDao)ac.getBean("countdao");
+			    MySqlExpenseCategoryDao categoryDao = (MySqlExpenseCategoryDao)ac.getBean("expensecatdao");
 			    out.println("<table>");
 			    for(int i=0; i<expenses.size(); i++){
 			    	int countId = expenses.get(i).getCount().getId();

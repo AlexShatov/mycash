@@ -17,7 +17,8 @@ public class MySqlIncomeDao extends MycashDao{
 	private static final String queryForRead = "from Income where id =:id";
 	private static final String queryForGetAll = "from Income where user_id =:user_id";
 	private static final String queryForGetAllActive = "from Income where user_id =:user_id and is_active = true";
-	private static final String queryForGetallForPeriod  = "from Income where inc_date between :start_date and :end_date and user_id =:user_id";
+	private static final String queryForGetallForPeriod  = "from Income where inc_date between :start_date and"
+			+ " :end_date and user_id =:user_id and is_active = true";
 	
 	
 	public void insert (Income income) throws DaoException{
@@ -26,6 +27,7 @@ public class MySqlIncomeDao extends MycashDao{
 		try {
 			session = HibernateUtil.getSessionFactory().openSession();
 			transaction = session.beginTransaction();
+			income.setIsActive(true);
 			session.save(income);
 			transaction.commit();
 		}

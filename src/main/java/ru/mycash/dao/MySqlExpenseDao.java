@@ -1,7 +1,5 @@
 package ru.mycash.dao;
 
-import java.sql.*;
-import java.io.*;
 import java.util.*;
 
 import javax.persistence.RollbackException;
@@ -12,17 +10,15 @@ import org.hibernate.Transaction;
 import org.hibernate.query.Query;
 
 import ru.mycash.domain.Expense;
-import ru.mycash.domain.Income;
 import ru.mycash.util.HibernateUtil;
-
-import java.text.*;
 
 public class MySqlExpenseDao extends MycashDao{
 	
 	private static final String queryForRead = "from Expense where id =:id";
 	private static final String queryForGetAll = "from Expense where user_id =:user_id";
 	private static final String queryForGetAllActive = "from Expense where user_id =:user_id and is_active = true";
-	private static final String queryForGetallForPeriod  = "from Expense where exp_date between :start_date and :end_date and user_id =:user_id";
+	private static final String queryForGetallForPeriod  = "from Expense where exp_date between :start_date and"
+															+ " :end_date and user_id =:user_id and is_active = true";
 	
 	public void insert (Expense expense) throws DaoException{
 		Session session = null;
@@ -30,6 +26,7 @@ public class MySqlExpenseDao extends MycashDao{
 		try {
 			session = HibernateUtil.getSessionFactory().openSession();
 			transaction = session.beginTransaction();
+			expense.setIsActive(true);
 			session.save(expense);
 			transaction.commit();
 		}
