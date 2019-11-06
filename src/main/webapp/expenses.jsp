@@ -117,20 +117,14 @@
 			  <tr>
 			    <%
 			    ArrayList<Expense> expenses = (ArrayList<Expense>)request.getAttribute("expenses");
-			    ApplicationContext ac = RequestContextUtils.findWebApplicationContext(request);
-			    MySqlCountDao countDao = (MySqlCountDao)ac.getBean("countdao");
-			    MySqlExpenseCategoryDao categoryDao = (MySqlExpenseCategoryDao)ac.getBean("expensecatdao");
 			    out.println("<table>");
 			    for(int i=0; i<expenses.size(); i++){
-			    	int countId = expenses.get(i).getCount().getId();
-			    	int categoryId = expenses.get(i).getExpenseCategory().getId();
-			    	String countName = countDao.read(countId).getCountName();
-			    	String categoryName = categoryDao.read(categoryId).getCategoryName();
-			    	out.println("<tr><td align=\"left\" width=\"180\">" + expenses.get(i).getAnnotation() + "</td>" +
-			    			"<td align=\"left\" width=\"180\">" + categoryName + "</td>" +
-			    			"<td align=\"left\" width=\"180\">" + countName + "</td>" + 
-			    			"<td align=\"left\" width=\"180\">" + expenses.get(i).getAmount() + "</td>" + 
-			    			"<td align=\"left\" width=\"180\">" + expenses.get(i).getExpenseDate() + "</td>" +
+			    	Expense expense = expenses.get(i);
+			    	out.println("<tr><td align=\"left\" width=\"180\">" + expense.getAnnotation() + "</td>" +
+			    			"<td align=\"left\" width=\"180\">" + expense.getExpenseCategory().getCategoryName() + "</td>" +
+			    			"<td align=\"left\" width=\"180\">" + expense.getCount().getCountName() + "</td>" + 
+			    			"<td align=\"left\" width=\"180\">" + expense.getAmount() + "</td>" + 
+			    			"<td align=\"left\" width=\"180\">" + expense.getExpenseDate() + "</td>" +
 			    			"<td align=\"left\" width=\"100\"><form method=\"post\" action=\"${pageContext.request.contextPath}/?action=delete_expense&expense_id=" +
 							expenses.get(i).getId() + "\"><button type=\"submit\">Delete</button></form></td></tr>"
 			    			);
