@@ -2,31 +2,23 @@ package ru.mycash.test.daotest;
 
 import static org.testng.AssertJUnit.*;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.testng.AbstractTransactionalTestNGSpringContextTests;
+import org.springframework.test.context.web.WebAppConfiguration;
+import org.springframework.transaction.annotation.Transactional;
 import org.testng.annotations.*;
 import ru.mycash.dao.MySqlUserDao;
+import ru.mycash.AppCtxConfig;
 import ru.mycash.dao.DaoException;
-import ru.mycash.MySqlDaoFactory;
 import ru.mycash.domain.User;
-import ru.mycash.test.util.TestDbCleaner;
 
-
-public class MySqlUserDaoTest {
+@WebAppConfiguration
+@ContextConfiguration(classes=AppCtxConfig.class)
+public class MySqlUserDaoTest extends AbstractTransactionalTestNGSpringContextTests{
 	
-	private MySqlDaoFactory factory = null;
-	private MySqlUserDao userDao = null;
-	private TestDbCleaner cleaner = null;
-	
-	@BeforeClass
-	public void initialize() throws DaoException{
-		factory = new MySqlDaoFactory();
-		userDao = factory.getMySqlUserDao();
-		cleaner = new TestDbCleaner();
-	}
-	
-	@BeforeMethod
-	public void cleanDb() throws DaoException{
-		cleaner.cleanUsers();
-	}
+	@Autowired
+	private MySqlUserDao userDao;
 	
 	@Test 
 	public void testRead() throws DaoException{
@@ -61,6 +53,7 @@ public class MySqlUserDaoTest {
 	}
 	
 	@Test 
+	@Transactional
 	public void testInsert() throws DaoException{
 		User user = new User();
 		user.setLogin("test");
@@ -78,6 +71,7 @@ public class MySqlUserDaoTest {
 	}
 	
 	@Test(expectedExceptions = DaoException.class)
+	@Transactional
 	public void testInsertException() throws DaoException{
 		User user = new User();
 		user.setPassword("2Qqqqq");
@@ -86,6 +80,7 @@ public class MySqlUserDaoTest {
 	}
 	
 	@Test 
+	@Transactional
 	public void testDeactivate() throws DaoException {
 		User user = new User();
 		user.setLogin("test");
@@ -100,11 +95,13 @@ public class MySqlUserDaoTest {
 	}
 	
 	@Test (expectedExceptions = DaoException.class)
+	@Transactional
 	public void TestDeactivateNull() throws DaoException{
 		userDao.deactivate(2);
 	}
 	
 	@Test 
+	@Transactional
 	public void testDelete() throws DaoException{
 		User user = new User();
 		user.setLogin("test");

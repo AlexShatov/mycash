@@ -1,36 +1,30 @@
 package ru.mycash.test.daotest;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.testng.AbstractTransactionalTestNGSpringContextTests;
+import org.springframework.test.context.web.WebAppConfiguration;
+import org.springframework.transaction.annotation.Transactional;
+
 import static org.testng.AssertJUnit.*;
 import org.testng.annotations.*;
 import java.util.ArrayList;
 import ru.mycash.dao.MySqlCountDao;
 import ru.mycash.dao.MySqlUserDao;
+import ru.mycash.AppCtxConfig;
 import ru.mycash.dao.DaoException;
-import ru.mycash.MySqlDaoFactory;
 import ru.mycash.domain.Count;
 import ru.mycash.domain.User;
-import ru.mycash.test.util.TestDbCleaner;
 
 
-public class MySqlCountDaoTest {
+@WebAppConfiguration
+@ContextConfiguration(classes=AppCtxConfig.class)
+public class MySqlCountDaoTest extends AbstractTransactionalTestNGSpringContextTests{
 	
-	private MySqlDaoFactory factory = null;
-	private MySqlCountDao countDao = null;
-	private TestDbCleaner cleaner = null;
-	private MySqlUserDao userDao = null;
-	
-	@BeforeClass
-	public void initialize() throws DaoException{
-		factory = new MySqlDaoFactory();
-		countDao = factory.getMySqlCountDao();
-		userDao = factory.getMySqlUserDao();
-		cleaner = new TestDbCleaner();
-	}
-	
-	@BeforeMethod
-	public void cleanDb() throws DaoException{
-		cleaner.cleanCounts();
-	}
+	@Autowired
+	private MySqlCountDao countDao;
+	@Autowired
+	private MySqlUserDao userDao;
 	
 	@Test
 	public void testRead() throws DaoException{
@@ -50,6 +44,7 @@ public class MySqlCountDaoTest {
 	}	
 	
 	@Test
+	@Transactional
 	public void testUpdate() throws DaoException{
 		User user = userDao.read(1);
 		Count count = new Count();
@@ -83,6 +78,7 @@ public class MySqlCountDaoTest {
 	}
 	
 	@Test
+	@Transactional
 	public void testInsert() throws DaoException{
 		Count count = new Count();
 		User user = userDao.read(1);
@@ -102,6 +98,7 @@ public class MySqlCountDaoTest {
 	}
 	
 	@Test
+	@Transactional
 	public void testDeactivate() throws DaoException {
 		Count count = new Count();
 		User user = userDao.read(1);
@@ -118,6 +115,7 @@ public class MySqlCountDaoTest {
 	}
 	
 	@Test (expectedExceptions = DaoException.class)
+	@Transactional
 	public void testDeactivateNull() throws DaoException{
 		countDao.deactivate(2);
 	}
@@ -129,6 +127,7 @@ public class MySqlCountDaoTest {
 	}
 	
 	@Test(dataProvider = "getGetAllActiveData")
+	@Transactional
 	public void testGetAllActive(int userId, int countArraySize) throws DaoException{
 		Count count = new Count();
 		User user = userDao.read(1);
@@ -145,6 +144,7 @@ public class MySqlCountDaoTest {
 	}
 	
 	@Test
+	@Transactional
 	public void testDelete() throws DaoException{
 		int countId;
 		Count count = new Count();

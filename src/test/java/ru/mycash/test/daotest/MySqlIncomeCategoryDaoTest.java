@@ -1,35 +1,29 @@
 package ru.mycash.test.daotest;
 
 import static org.testng.AssertJUnit.*;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.testng.AbstractTransactionalTestNGSpringContextTests;
+import org.springframework.test.context.web.WebAppConfiguration;
+import org.springframework.transaction.annotation.Transactional;
 import org.testng.annotations.*;
 import java.util.ArrayList;
 import ru.mycash.dao.MySqlIncomeCategoryDao;
 import ru.mycash.dao.MySqlUserDao;
+import ru.mycash.AppCtxConfig;
 import ru.mycash.dao.DaoException;
-import ru.mycash.MySqlDaoFactory;
 import ru.mycash.domain.IncomeCategory;
 import ru.mycash.domain.User;
-import ru.mycash.test.util.TestDbCleaner;
 
-public class MySqlIncomeCategoryDaoTest {
+@WebAppConfiguration
+@ContextConfiguration(classes=AppCtxConfig.class)
+public class MySqlIncomeCategoryDaoTest extends AbstractTransactionalTestNGSpringContextTests{
 
-	private MySqlDaoFactory factory = null;
-	private MySqlIncomeCategoryDao incomeCatDao = null;
-	private TestDbCleaner cleaner = null;
-	private MySqlUserDao userDao = null;
-	
-	@BeforeClass
-	public void initialize() throws DaoException{
-		factory = new MySqlDaoFactory();
-		incomeCatDao = factory.getMySqlIncomeCategoryDao();
-		userDao = factory.getMySqlUserDao();
-		cleaner = new TestDbCleaner();
-	}
-	
-	@BeforeMethod
-	public void cleanDb() throws DaoException{
-		cleaner.cleanIncomeCategories();
-	}
+	@Autowired
+	private MySqlIncomeCategoryDao incomeCatDao;
+	@Autowired
+	private MySqlUserDao userDao;
 	
 	@Test
 	public void testRead() throws DaoException{
@@ -60,6 +54,7 @@ public class MySqlIncomeCategoryDaoTest {
 	}
 	
 	@Test
+	@Transactional
 	public void testInsert() throws DaoException{
 		IncomeCategory incomeCat = new IncomeCategory();
 		User user = userDao.read(1);
@@ -76,6 +71,7 @@ public class MySqlIncomeCategoryDaoTest {
 	}
 	
 	@Test
+	@Transactional
 	public void testDelete() throws DaoException{
 		IncomeCategory incomeCat = new IncomeCategory();
 		User user = userDao.read(1);
@@ -95,6 +91,7 @@ public class MySqlIncomeCategoryDaoTest {
 	}
 	
 	@Test(dataProvider = "getGetAllActiveData")
+	@Transactional
 	public void testGetAllActive(int userId, int categoryArraySize) throws DaoException{
 		IncomeCategory incomeCat = new IncomeCategory();
 		User user = userDao.read(1);
@@ -109,6 +106,7 @@ public class MySqlIncomeCategoryDaoTest {
 	}
 	
 	@Test
+	@Transactional
 	public void testDeactivate() throws DaoException {
 		IncomeCategory incomeCat = new IncomeCategory();
 		User user = userDao.read(1);
@@ -123,11 +121,13 @@ public class MySqlIncomeCategoryDaoTest {
 	}
 	
 	@Test (expectedExceptions = DaoException.class)
+	@Transactional
 	public void testDeactivateNull() throws DaoException{
 		incomeCatDao.deactivate(2);
 	}
 	
 	@Test
+	@Transactional
 	public void testUpdate()throws DaoException{
 		IncomeCategory incomeCat = new IncomeCategory();
 		User user = userDao.read(1);

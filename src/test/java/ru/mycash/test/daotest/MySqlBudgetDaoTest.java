@@ -1,6 +1,12 @@
 package ru.mycash.test.daotest;
 
 import static org.testng.AssertJUnit.*;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.testng.AbstractTransactionalTestNGSpringContextTests;
+import org.springframework.test.context.web.WebAppConfiguration;
+import org.springframework.transaction.annotation.Transactional;
 import org.testng.annotations.*;
 
 import java.text.ParseException;
@@ -9,35 +15,24 @@ import java.util.*;
 
 import ru.mycash.dao.MySqlBudgetDao;
 import ru.mycash.dao.MySqlUserDao;
+import ru.mycash.AppCtxConfig;
 import ru.mycash.dao.DaoException;
 import ru.mycash.dao.MySqlExpenseCategoryDao;
-import ru.mycash.MySqlDaoFactory;
 import ru.mycash.domain.BudgetEntry;
 import ru.mycash.domain.ExpenseCategory;
 import ru.mycash.domain.User;
-import ru.mycash.test.util.TestDbCleaner;
 
-public class MySqlBudgetDaoTest {
+@WebAppConfiguration
+@ContextConfiguration(classes=AppCtxConfig.class)
+
+public class MySqlBudgetDaoTest extends AbstractTransactionalTestNGSpringContextTests{
 	
-	private MySqlDaoFactory factory = null;
-	private MySqlBudgetDao budgetDao = null;
-	private TestDbCleaner cleaner = null;
-	private MySqlUserDao userDao = null;
-	private MySqlExpenseCategoryDao expenseCatDao = null;
-	
-	@BeforeClass
-	public void initialize() throws DaoException{
-		factory = new MySqlDaoFactory();
-		budgetDao = factory.getMySqlBudgetDao();
-		userDao = factory.getMySqlUserDao();
-		expenseCatDao = factory.getMySqlExpenseCategoryDao();
-		cleaner = new TestDbCleaner();
-	}
-	
-	@BeforeMethod
-	public void cleanDb() throws DaoException{
-		cleaner.cleanBudget();
-	}
+	@Autowired
+	private MySqlBudgetDao budgetDao;
+	@Autowired
+	private MySqlUserDao userDao;
+	@Autowired
+	private MySqlExpenseCategoryDao expenseCatDao;
 	
 	@Test
 	public void testRead() throws DaoException, ParseException{
@@ -53,6 +48,7 @@ public class MySqlBudgetDaoTest {
 	}
 	
 	@Test
+	@Transactional
 	public void testInsert() throws DaoException, ParseException{
 		BudgetEntry entry = new BudgetEntry();
 		User user = userDao.read(1);
@@ -75,6 +71,7 @@ public class MySqlBudgetDaoTest {
 	}
 	
 	@Test
+	@Transactional
 	public void testUpdate()throws DaoException, ParseException{
 		BudgetEntry entry = new BudgetEntry();
 		User user = userDao.read(1);
@@ -96,6 +93,7 @@ public class MySqlBudgetDaoTest {
 	}
 	
 	@Test
+	@Transactional
 	public void testDelete() throws DaoException, ParseException{
 		BudgetEntry entry = new BudgetEntry();
 		User user = userDao.read(1);

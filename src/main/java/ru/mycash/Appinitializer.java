@@ -17,12 +17,15 @@ public class Appinitializer implements WebApplicationInitializer {
 	public void onStartup(ServletContext servletContext) throws ServletException {
 		AnnotationConfigWebApplicationContext ctx = new AnnotationConfigWebApplicationContext();
 		ctx.register(AppCtxConfig.class);
+		ctx.setServletContext(servletContext);
+		ctx.refresh();
 		servletContext.addListener(new ContextLoaderListener(ctx));
 		servletContext.addListener(new RequestContextListener());
 		
-		ServletRegistration.Dynamic registration = servletContext.addServlet("myCashServlet", new MyCashServlet());
+		ServletRegistration.Dynamic registration = servletContext.addServlet("servlet", new MyCashServlet());
 		registration.setLoadOnStartup(1);
 		registration.addMapping("/");
+	
 	}
 
 }

@@ -9,32 +9,20 @@ import javax.servlet.*;
 import javax.servlet.http.*;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
 import org.springframework.web.context.support.SpringBeanAutowiringSupport;
 
 import ru.mycash.dao.*;
 import ru.mycash.domain.*;
+import ru.mycash.service.MyCashMainService;
 import ru.mycash.util.InputMatcher;
-
-@Component
 
 public class MyCashServlet extends HttpServlet{
 	
 	private static InputMatcher matcher;
+	
 	@Autowired
-	private MySqlIncomeDao incomeDao;
-	@Autowired
-	private MySqlUserDao userDao;
-	@Autowired
-	private MySqlExpenseDao expenseDao;
-	@Autowired
-	private MySqlExpenseCategoryDao expenseCategoryDao;
-	@Autowired
-	private MySqlIncomeCategoryDao incomeCategoryDao;
-	@Autowired
-	private MySqlCountDao countDao;
-	@Autowired
-	private MySqlBudgetDao budgetDao;
+	private MyCashMainService service;
+	
 	
 	@Override
 	public void init(ServletConfig config) throws ServletException {
@@ -107,7 +95,6 @@ public class MyCashServlet extends HttpServlet{
 		resp.sendRedirect(req.getContextPath() + "/");
 	}
 	
-	
 	private void authorize(HttpServletRequest req, HttpServletResponse resp) 
 			throws ServletException, IOException, DaoException{
 		String login = req.getParameter("login");
@@ -125,7 +112,7 @@ public class MyCashServlet extends HttpServlet{
 			req.setAttribute("pass_placeholder", "incorrect password");
 			getServletContext().getRequestDispatcher("/authorization.jsp").forward(req,resp);
 		}
-		User existingUser = userDao.getByLogin(user.getLogin());
+		User existingUser = service.getUserByLogin(login);
 		if (existingUser != null) {
 			if(existingUser.getPassword().equals(user.getPassword())) {
 				req.getSession().setAttribute("loginedUser", existingUser);
@@ -168,14 +155,11 @@ public class MyCashServlet extends HttpServlet{
 			req.setAttribute("mail_placeholder", "incorrect email");
 			getServletContext().getRequestDispatcher("/registration.jsp").forward(req,resp);
 		}
-		if(userDao.getByLogin(login)!= null) {
+		if(service.getUserByLogin(login) != null) {
 			req.setAttribute("login_placeholder", "user already exists");
 			getServletContext().getRequestDispatcher("/?action=get_reg").forward(req,resp);
 		}else {
-			user.setLogin(req.getParameter("login"));
-			user.setPassword(req.getParameter("pass"));
-			user.setMail(req.getParameter("email"));
-			userDao.insert(user);
+			service.insertUser(user);
 			resp.sendRedirect(req.getContextPath()  + "/?action=get_auth");
 		}
 	}
@@ -202,13 +186,13 @@ public class MyCashServlet extends HttpServlet{
 		String newPass = req.getParameter("new_pass");
 		String repeatPass = req.getParameter("repeat_new_pass");
 		User loginedUser = (User)req.getSession().getAttribute("loginedUser");
-		String passFromDb = userDao.getByLogin(loginedUser.getLogin()).getPassword();
+		String passFromDb = service.getUserByLogin(loginedUser.getLogin()).getPassword();
 		if(matcher.matchPassword(newPass)) {
 			if(matcher.matchPassword(repeatPass)) {
 				if(newPass.equals(repeatPass)) {
 					if(oldPass != null && oldPass.equals(passFromDb) & matcher.matchPassword(oldPass)) {
 						loginedUser.setPassword(newPass);
-						userDao.update(loginedUser);
+						service.updateUser(loginedUser);
 						req.setAttribute("old_pass_placeholder", "successfully changed");
 						getServletContext().getRequestDispatcher("/cabinet.jsp").forward(req,resp);
 					}else {
@@ -240,23 +224,21 @@ public class MyCashServlet extends HttpServlet{
 			startDate = new SimpleDateFormat("yyyy-MM-dd").format(new Date());
 			endDate = startDate;
 		}
-		ArrayList<IncomeCategory> categories = incomeCategoryDao.getAllActive(userId);
-		ArrayList<Count> counts = countDao.getAllActive(userId);
 		if(matcher.matchDate(startDate) && matcher.matchDate(endDate)) {
-			ArrayList<Income> incomes = incomeDao.getAllForPeriod(startDate, endDate, userId);
+			HashMap<String, ArrayList<?>> pageData = service.getDataForIncomesPage(userId, startDate, endDate);
 			req.setAttribute("login", loginedUser.getLogin());
-			req.setAttribute("incomes", incomes);
-			req.setAttribute("categories", categories);
-			req.setAttribute("counts", counts);
+			req.setAttribute("incomes", pageData.get("incomes"));
+			req.setAttribute("categories", pageData.get("categories"));
+			req.setAttribute("counts", pageData.get("counts"));
 			getServletContext().getRequestDispatcher("/incomes.jsp").forward(req,resp);
 		}else {
 			resp.sendRedirect(req.getContextPath() + "/?action=get_error_page");
 		}
 	}
 	
+	
 	private void addIncome(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException, 
 			DaoException, ParseException{
-		Income income = new Income();
 		User loginedUser = (User)req.getSession().getAttribute("loginedUser");
 		int userId = loginedUser.getId();
 		String annotation = req.getParameter("annotation");
@@ -269,22 +251,7 @@ public class MyCashServlet extends HttpServlet{
 				if(matcher.matchName(countName)) {
 					if(matcher.matchAmount(amountStr)) {
 						if(matcher.matchDate(dateStr)) {
-							IncomeCategory incomeCategory = incomeCategoryDao.getByName(userId, categoryName);
-							Count count = countDao.getByName(countName, userId);
-							Double amount = Double.parseDouble(amountStr);
-							Double oldAmount = count.getBalance();
-							count.setBalance(oldAmount + amount);
-							countDao.update(count);
-							SimpleDateFormat format = new SimpleDateFormat();
-							format.applyPattern("yyyy-MM-dd"); 
-							Date date = format.parse(dateStr);
-							income.setAnnotation(annotation);
-							income.setIncomeCategory(incomeCategory);
-							income.setAmount(amount);
-							income.setCount(count);
-							income.setIncDate(date);
-							income.setUser(loginedUser);
-							incomeDao.insert(income);
+							service.addIncome(userId, dateStr, categoryName, annotation, amountStr, countName, loginedUser);
 							resp.sendRedirect(req.getContextPath() + "/?action=get_incomes");
 						}else {
 							resp.sendRedirect(req.getContextPath() + "/?action=get_error_page");
@@ -304,17 +271,15 @@ public class MyCashServlet extends HttpServlet{
 		}
 	}
 	
-
 	private void deleteIncome (HttpServletRequest req, HttpServletResponse resp) 
 			throws ServletException, IOException, DaoException{
 		int incomeId = Integer.parseInt(req.getParameter("income_id"));
-		incomeDao.deactivate(incomeId);
+		service.deleteIncome(incomeId);
 		resp.sendRedirect(req.getContextPath()  + "/?action=get_incomes");
 	}	
 	
 	private void addExpense(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException, 
 			DaoException, ParseException{
-		Expense expense = new Expense();
 		User loginedUser = (User)req.getSession().getAttribute("loginedUser");
 		int userId = loginedUser.getId();
 		String annotation = req.getParameter("annotation");
@@ -327,22 +292,8 @@ public class MyCashServlet extends HttpServlet{
 				if(matcher.matchName(countName)) {
 					if(matcher.matchAmount(amountStr)) {
 						if(matcher.matchDate(dateStr)) {
-							ExpenseCategory expenseCat = expenseCategoryDao.getByName(userId, category);
-							Count count = countDao.getByName(countName, userId);
-							Double amount = Double.parseDouble(amountStr);
-							Double oldAmount = count.getBalance();
-							count.setBalance(oldAmount - amount);
-							countDao.update(count);
-							SimpleDateFormat format = new SimpleDateFormat();
-							format.applyPattern("yyyy-MM-dd"); 
-							Date date = format.parse(dateStr);
-							expense.setAnnotation(annotation);
-							expense.setExpenseCategory(expenseCat);
-							expense.setAmount(amount);
-							expense.setCount(count);
-							expense.setExpenseDate(date);
-							expense.setUser(loginedUser);
-							expenseDao.insert(expense);
+							service.addExpense(userId, dateStr, category, annotation, amountStr, 
+									countName, loginedUser);
 							resp.sendRedirect(req.getContextPath() + "/?action=get_expenses");
 						}else {
 							resp.sendRedirect(req.getContextPath() + "/?action=get_error_page");
@@ -365,7 +316,7 @@ public class MyCashServlet extends HttpServlet{
 	private void deleteExpense (HttpServletRequest req, HttpServletResponse resp) 
 			throws ServletException, IOException, DaoException{
 		int expenseId = Integer.parseInt(req.getParameter("expense_id"));
-		expenseDao.deactivate(expenseId);
+		service.deleteExpense(expenseId);
 		resp.sendRedirect(req.getContextPath()  + "/?action=get_expenses");
 	}
 	
@@ -379,14 +330,12 @@ public class MyCashServlet extends HttpServlet{
 			startDate = new SimpleDateFormat("yyyy-MM-dd").format(new Date());
 			endDate = startDate;
 		}
-		ArrayList<ExpenseCategory> categories = expenseCategoryDao.getAllActive(userId);
-		ArrayList<Count> counts = countDao.getAllActive(userId);
+		HashMap<String, ArrayList<?>> pageData = service.getDataForExpensePage(userId, startDate, endDate);
 		if(matcher.matchDate(startDate) && matcher.matchDate(endDate)) {
-			ArrayList<Expense> expenses = expenseDao.getAllForPeriod(startDate, endDate, userId);
 			req.setAttribute("login", loginedUser.getLogin());
-			req.setAttribute("expenses", expenses);
-			req.setAttribute("categories", categories);
-			req.setAttribute("counts", counts);
+			req.setAttribute("expenses", pageData.get("expenses"));
+			req.setAttribute("categories", pageData.get("categories"));
+			req.setAttribute("counts", pageData.get("counts"));
 			getServletContext().getRequestDispatcher("/expenses.jsp").forward(req,resp);
 		}else {
 			resp.sendRedirect(req.getContextPath() + "/?action=get_error_page");
@@ -397,7 +346,7 @@ public class MyCashServlet extends HttpServlet{
 			throws ServletException, IOException, DaoException{
 		User loginedUser = (User)req.getSession().getAttribute("loginedUser");
 		int userId = loginedUser.getId(); 
-		ArrayList<Count> counts = countDao.getAllActive(userId);
+		ArrayList<Count> counts = service.getDataForCountPage(userId);
 		req.setAttribute("counts", counts);
 		req.setAttribute("login", loginedUser.getLogin());
 		getServletContext().getRequestDispatcher("/counts.jsp").forward(req,resp);
@@ -406,13 +355,12 @@ public class MyCashServlet extends HttpServlet{
 	private void deleteCount(HttpServletRequest req, HttpServletResponse resp) 
 			throws ServletException, IOException, DaoException{
 		int countId = Integer.parseInt(req.getParameter("count_id"));
-		countDao.deactivate(countId);
+		service.deleteCount(countId);
 		resp.sendRedirect(req.getContextPath()  + "/?action=get_counts");
 	}
 	
 	private void addCount(HttpServletRequest req, HttpServletResponse resp) 
 			throws ServletException, IOException, DaoException{
-		Count count = new Count();
 		User loginedUser = (User)req.getSession().getAttribute("loginedUser");
 		String countName = req.getParameter("count_name");
 		String balance = req.getParameter("balance");
@@ -420,11 +368,7 @@ public class MyCashServlet extends HttpServlet{
 		if(matcher.matchName(countName)) {
 			if(matcher.matchAmount(balance)) {
 				if(matcher.matchCurrency(currency)) {
-					count.setCountName(countName);
-					count.setBalance(Double.parseDouble(balance));
-					count.setCurrency(currency);
-					count.setUser(loginedUser);
-					countDao.insert(count);
+					service.insertCount(currency, balance, countName, loginedUser);
 					resp.sendRedirect(req.getContextPath()  + "/?action=get_counts");
 				}else {
 					req.setAttribute("err_message", "Invalid currency input while adding count");

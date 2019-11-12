@@ -1,35 +1,31 @@
 package ru.mycash.test.daotest;
 
 import static org.testng.AssertJUnit.*;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.testng.AbstractTransactionalTestNGSpringContextTests;
+import org.springframework.test.context.web.WebAppConfiguration;
+import org.springframework.transaction.annotation.Transactional;
 import org.testng.annotations.*;
+
 import java.util.ArrayList;
+
 import ru.mycash.dao.MySqlExpenseCategoryDao;
 import ru.mycash.dao.MySqlUserDao;
+import ru.mycash.AppCtxConfig;
 import ru.mycash.dao.DaoException;
-import ru.mycash.MySqlDaoFactory;
 import ru.mycash.domain.ExpenseCategory;
 import ru.mycash.domain.User;
-import ru.mycash.test.util.TestDbCleaner;
 
-public class MySqlExpenseCategoryDaoTest {
+@WebAppConfiguration
+@ContextConfiguration(classes=AppCtxConfig.class)
+public class MySqlExpenseCategoryDaoTest extends AbstractTransactionalTestNGSpringContextTests{
 
-	private MySqlDaoFactory factory = null;
-	private MySqlExpenseCategoryDao expenseCatDao = null;
-	private MySqlUserDao userDao = null;
-	private TestDbCleaner cleaner = null;
-	
-	@BeforeClass
-	public void initialize() throws DaoException{
-		factory = new MySqlDaoFactory();
-		expenseCatDao = factory.getMySqlExpenseCategoryDao();
-		userDao = factory.getMySqlUserDao();
-		cleaner = new TestDbCleaner();
-	}
-	
-	@BeforeMethod
-	public void cleanDb() throws DaoException{
-		cleaner.cleanExpenseCategories();
-	}
+	@Autowired
+	private MySqlExpenseCategoryDao expenseCatDao;
+	@Autowired
+	private MySqlUserDao userDao;
 	
 	@Test
 	public void testRead() throws DaoException{
@@ -60,6 +56,7 @@ public class MySqlExpenseCategoryDaoTest {
 	}
 	
 	@Test
+	@Transactional
 	public void testInsert() throws DaoException{
 		ExpenseCategory expenseCat = new ExpenseCategory();
 		User user = userDao.read(1);
@@ -76,6 +73,7 @@ public class MySqlExpenseCategoryDaoTest {
 	}
 	
 	@Test
+	@Transactional
 	public void testDelete() throws DaoException{
 		ExpenseCategory expenseCat = new ExpenseCategory();
 		User user = userDao.read(1);
@@ -94,6 +92,7 @@ public class MySqlExpenseCategoryDaoTest {
 	}
 	
 	@Test(dataProvider = "getGetAllActiveData")
+	@Transactional
 	public void testGetAllActive(int userId, int categoryArraySize) throws DaoException{
 		ExpenseCategory expenseCat = new ExpenseCategory();
 		User user = userDao.read(1);
@@ -108,6 +107,7 @@ public class MySqlExpenseCategoryDaoTest {
 	}
 	
 	@Test
+	@Transactional
 	public void testDeactivate() throws DaoException {
 		ExpenseCategory expenseCat = new ExpenseCategory();
 		User user = userDao.read(1);
@@ -122,11 +122,13 @@ public class MySqlExpenseCategoryDaoTest {
 	}
 	
 	@Test (expectedExceptions = DaoException.class)
+	@Transactional
 	public void testDeactivateNull() throws DaoException{
 		expenseCatDao.deactivate(2);
 	}
 	
 	@Test
+	@Transactional
 	public void testUpdate()throws DaoException{
 		ExpenseCategory expenseCat = new ExpenseCategory();
 		User user = userDao.read(1);
